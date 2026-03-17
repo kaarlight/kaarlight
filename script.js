@@ -34,62 +34,7 @@ const DEFAULT_SETTINGS = {
     }
 };
 
-const DEFAULT_JOBS = [
-    {
-        id: -1,
-        title: 'Social Media Manager for Local Bakery',
-        category: 'Social Media',
-        description: 'Create weekly posts, reply to comments, and help improve local visibility on Facebook and Instagram.',
-        location: 'Kabul',
-        contact: 'bakery.hiring@example.com',
-        posterType: 'Business',
-        price: 180,
-        currency: 'USD',
-        isOnline: true,
-        sampleLink: 'https://example.com/sample-work',
-        portfolioLink: '',
-        media: '',
-        mediaType: '',
-        postedByName: 'City Bakery',
-        createdAt: '2026-01-15T09:00:00.000Z'
-    },
-    {
-        id: -2,
-        title: 'Arabic to Dari Translator Needed',
-        category: 'Translator',
-        description: 'Translate short legal and business documents with clear formatting and accurate terminology.',
-        location: 'Herat',
-        contact: '+93 700 123 456',
-        posterType: 'Poster',
-        price: 120,
-        currency: 'USD',
-        isOnline: true,
-        sampleLink: 'https://example.com/translation-sample',
-        portfolioLink: '',
-        media: '',
-        mediaType: '',
-        postedByName: 'Hamid',
-        createdAt: '2026-01-10T11:30:00.000Z'
-    },
-    {
-        id: -3,
-        title: 'Part-time Math Tutor (Grade 9-12)',
-        category: 'Tutor',
-        description: 'Provide three evening sessions per week for high school students. Prior tutoring experience preferred.',
-        location: 'Kandahar',
-        contact: 'tutor.jobs@example.com',
-        posterType: 'Poster',
-        price: 90,
-        currency: 'USD',
-        isOnline: false,
-        sampleLink: '',
-        portfolioLink: '',
-        media: '',
-        mediaType: '',
-        postedByName: 'Zainab',
-        createdAt: '2026-01-05T08:45:00.000Z'
-    }
-];
+const DEFAULT_JOBS = [];
 
 const Utils = {
     escapeHtml(value) {
@@ -181,7 +126,13 @@ const Storage = {
             const data = localStorage.getItem(APP_KEYS.JOBS);
             if (data) {
                 const parsed = JSON.parse(data);
-                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const cleaned = parsed.filter((job) => !(typeof job?.id === 'number' && job.id < 0));
+                    if (cleaned.length !== parsed.length) {
+                        localStorage.setItem(APP_KEYS.JOBS, JSON.stringify(cleaned));
+                    }
+                    return cleaned;
+                }
                 localStorage.setItem(APP_KEYS.JOBS, JSON.stringify(DEFAULT_JOBS));
                 return [...DEFAULT_JOBS];
             }
@@ -190,8 +141,9 @@ const Storage = {
             const legacy = localStorage.getItem(APP_KEYS.LEGACY_JOBS);
             const parsedLegacy = legacy ? JSON.parse(legacy) : [];
             if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
-                localStorage.setItem(APP_KEYS.JOBS, JSON.stringify(parsedLegacy));
-                return parsedLegacy;
+                const cleanedLegacy = parsedLegacy.filter((job) => !(typeof job?.id === 'number' && job.id < 0));
+                localStorage.setItem(APP_KEYS.JOBS, JSON.stringify(cleanedLegacy));
+                return cleanedLegacy;
             }
 
             localStorage.setItem(APP_KEYS.JOBS, JSON.stringify(DEFAULT_JOBS));
