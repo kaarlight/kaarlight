@@ -376,7 +376,26 @@
 
     function getUserJobs(userId, userEmail) {
       const jobs = readJson(KEYS.JOBS, []);
-      return jobs.filter((job) => job.posterId === userId || job.postedBy === userEmail);
+      const safeUserId = userId ?? null;
+      const safeEmail = String(userEmail || '').trim().toLowerCase();
+
+      return jobs.filter((job) => {
+        if (!job) return false;
+
+        // Hide seeded/system jobs (negative numeric IDs).
+        if (typeof job.id === 'number' && job.id < 0) return false;
+
+        const matchesId = safeUserId !== null
+          && job.posterId !== undefined
+          && job.posterId !== null
+          && String(job.posterId) === String(safeUserId);
+
+        const matchesEmail = Boolean(safeEmail)
+          && job.postedBy
+          && String(job.postedBy).trim().toLowerCase() === safeEmail;
+
+        return matchesId || matchesEmail;
+      });
     }
 
     function loadUserJobs(userId) {
