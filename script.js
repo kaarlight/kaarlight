@@ -201,7 +201,9 @@ const Storage = {
                 const docRef = await FirebaseStore.db.collection('jobs').add(payload);
                 return { ok: true, id: docRef.id };
             } catch {
-                return { ok: false };
+                // If Firestore write fails (rules/offline), fall back to local storage.
+                const localOk = this.saveJob(job);
+                return localOk ? { ok: true, local: true } : { ok: false };
             }
         }
 
