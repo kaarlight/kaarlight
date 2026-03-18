@@ -737,7 +737,7 @@
         const msgEl = document.getElementById('report-msg');
         if (!form || !job) return;
 
-        form.addEventListener('submit', (event) => {
+        form.addEventListener('submit', async (event) => {
           event.preventDefault();
 
           const reason = String(document.getElementById('report-reason')?.value || '').trim();
@@ -762,8 +762,8 @@
             reporterName: currentUser?.fullname || null
           };
 
-          const ok = Storage.saveReport(payload);
-          if (!ok) {
+          const result = await Storage.saveReportAsync(payload);
+          if (!result.ok) {
             if (msgEl) {
               msgEl.textContent = LanguageManager.t('report_submit_fail');
               msgEl.className = 'feedback-msg error';

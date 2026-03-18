@@ -17,6 +17,12 @@ const APP_KEYS = {
     LANGUAGE: 'afg_language'
 };
 
+const ADMIN_EMAILS = ['mahd62215@gmail.com'];
+const REPORTS_COLLECTION = 'reports';
+const FEEDBACK_COLLECTION = 'feedback';
+const REPORTS_LIMIT = 500;
+const FEEDBACK_LIMIT = 500;
+
 const DEFAULT_SETTINGS = {
     theme: 'light',
     jobSearch: '',
@@ -82,6 +88,12 @@ const Utils = {
         if (job.posterId && user.id && String(job.posterId) === String(user.id)) return true;
         if (job.postedBy && user.email && String(job.postedBy).toLowerCase() === String(user.email).toLowerCase()) return true;
         return false;
+    },
+
+    isAdmin(user) {
+        if (!user?.email) return false;
+        const email = String(user.email).trim().toLowerCase();
+        return ADMIN_EMAILS.includes(email);
     }
 };
 
@@ -342,6 +354,24 @@ const Storage = {
         return this.deleteJobById(jobId, user);
     },
 
+    async pruneCollection(collection, limit) {
+        if (!FirebaseStore.enabled || !FirebaseStore.db) return;
+        try {
+            const snapshot = await FirebaseStore.db
+                .collection(collection)
+                .orderBy('createdAtMs', 'desc')
+                .get();
+            if (snapshot.size <= limit) return;
+            const docsToDelete = snapshot.docs.slice(limit);
+            if (docsToDelete.length === 0) return;
+            const batch = FirebaseStore.db.batch();
+            docsToDelete.forEach((doc) => batch.delete(doc.ref));
+            await batch.commit();
+        } catch {
+            // Ignore prune errors.
+        }
+    },
+
     saveReport(report) {
         try {
             const reports = Utils.readJson(APP_KEYS.REPORTS, []);
@@ -354,6 +384,54 @@ const Storage = {
             return true;
         } catch {
             return false;
+        }
+    },
+
+    async saveReportAsync(report) {
+        const payload = {
+            ...report,
+            createdAt: new Date().toISOString(),
+            createdAtMs: Date.now()
+        };
+
+        if (FirebaseStore.enabled && FirebaseStore.db) {
+            try {
+                await FirebaseStore.db.collection(REPORTS_COLLECTION).add(payload);
+                await this.pruneCollection(REPORTS_COLLECTION, REPORTS_LIMIT);
+                return { ok: true };
+            } catch {
+                // Fall back to local storage below.
+            }
+        }
+
+        const ok = this.saveReport(payload);
+        return ok ? { ok: true, local: true } : { ok: false };
+    },
+
+    async saveFeedbackAsync(feedback) {
+        const payload = {
+            ...feedback,
+            createdAt: new Date().toISOString(),
+            createdAtMs: Date.now()
+        };
+
+        if (FirebaseStore.enabled && FirebaseStore.db) {
+            try {
+                await FirebaseStore.db.collection(FEEDBACK_COLLECTION).add(payload);
+                await this.pruneCollection(FEEDBACK_COLLECTION, FEEDBACK_LIMIT);
+                return { ok: true };
+            } catch {
+                // Fall back to local storage below.
+            }
+        }
+
+        try {
+            const feedbackList = Utils.readJson(APP_KEYS.FEEDBACK, []);
+            feedbackList.push(payload);
+            localStorage.setItem(APP_KEYS.FEEDBACK, JSON.stringify(feedbackList.slice(0, FEEDBACK_LIMIT)));
+            return { ok: true, local: true };
+        } catch {
+            return { ok: false };
         }
     }
 };
@@ -1496,7 +1574,7 @@ const FeedbackHandler = {
         const form = document.getElementById('feedback-form');
         if (!form) return;
 
-        form.addEventListener('submit', (event) => {
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
             const name = String(document.getElementById('feedback-name')?.value || '').trim() || 'Anonymous';
@@ -1520,29 +1598,22 @@ const FeedbackHandler = {
                 return;
             }
 
-            try {
-                const feedback = JSON.parse(localStorage.getItem(APP_KEYS.FEEDBACK) || '[]');
-                feedback.push({
-                    name,
-                    email,
-                    message,
-                    timestamp: new Date().toISOString()
-                });
-                localStorage.setItem(APP_KEYS.FEEDBACK, JSON.stringify(feedback));
-
-                form.reset();
-                if (msgEl) {
-                    msgEl.textContent = LanguageManager.t('feedback_thanks');
-                    msgEl.className = 'feedback-msg success';
-                    setTimeout(() => {
-                        msgEl.className = 'feedback-msg';
-                    }, 3000);
-                }
-            } catch {
+            const result = await Storage.saveFeedbackAsync({ name, email, message });
+            if (!result.ok) {
                 if (msgEl) {
                     msgEl.textContent = LanguageManager.t('feedback_save_fail');
                     msgEl.className = 'feedback-msg error';
                 }
+                return;
+            }
+
+            form.reset();
+            if (msgEl) {
+                msgEl.textContent = LanguageManager.t('feedback_thanks');
+                msgEl.className = 'feedback-msg success';
+                setTimeout(() => {
+                    msgEl.className = 'feedback-msg';
+                }, 3000);
             }
         });
     }
@@ -1649,6 +1720,30 @@ const JobSeekerHandler = {
 };
 
 const ReportsManager = {
+    async fetchReports() {
+        if (FirebaseStore.enabled && FirebaseStore.db) {
+            try {
+                const snapshot = await FirebaseStore.db
+                    .collection(REPORTS_COLLECTION)
+                    .orderBy('createdAtMs', 'desc')
+                    .limit(REPORTS_LIMIT)
+                    .get();
+                return snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    __source: 'firebase'
+                }));
+            } catch {
+                // Fall back to local storage below.
+            }
+        }
+
+        return Utils.readJson(APP_KEYS.REPORTS, []).map((report) => ({
+            ...report,
+            __source: 'local'
+        }));
+    },
+
     renderReports(reports) {
         const list = document.getElementById('reports-list');
         const empty = document.getElementById('reports-empty');
@@ -1676,6 +1771,8 @@ const ReportsManager = {
                 })
                 : '-';
             const jobLink = report.jobId ? `job-detail.html?id=${report.jobId}` : '';
+            const reportId = Utils.escapeHtml(String(report.id || ''));
+            const reportSource = Utils.escapeHtml(String(report.__source || 'local'));
 
             return `
                 <div class="report-card">
@@ -1688,35 +1785,82 @@ const ReportsManager = {
                     ${details ? `<div class="report-details">${details}</div>` : ''}
                     <div class="report-actions">
                         ${jobLink ? `<a class="btn outline small" href="${jobLink}">View Job</a>` : ''}
-                        <button class="btn danger small" data-report-id="${report.id}">Delete Report</button>
+                        <button class="btn danger small" data-report-id="${reportId}" data-report-source="${reportSource}">Delete Report</button>
                     </div>
                 </div>
             `;
         }).join('');
 
         list.querySelectorAll('button[data-report-id]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const id = Number(btn.getAttribute('data-report-id'));
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-report-id');
+                const source = btn.getAttribute('data-report-source') || 'local';
                 if (!confirm(LanguageManager.t('report_delete_confirm'))) return;
-                const updated = reports.filter((item) => Number(item.id) !== id);
-                localStorage.setItem(APP_KEYS.REPORTS, JSON.stringify(updated));
-                this.renderReports(updated);
+                await this.deleteReport(id, source);
+                const refreshed = await this.fetchReports();
+                this.renderReports(refreshed);
             });
         });
     },
 
-    init() {
+    async deleteReport(id, source) {
+        if (source === 'firebase' && FirebaseStore.enabled && FirebaseStore.db) {
+            try {
+                await FirebaseStore.db.collection(REPORTS_COLLECTION).doc(String(id)).delete();
+                return;
+            } catch {
+                // Fall back to local if needed.
+            }
+        }
+
+        const reports = Utils.readJson(APP_KEYS.REPORTS, []);
+        const updated = reports.filter((item) => String(item.id) !== String(id));
+        localStorage.setItem(APP_KEYS.REPORTS, JSON.stringify(updated));
+    },
+
+    async clearReports() {
+        if (FirebaseStore.enabled && FirebaseStore.db) {
+            try {
+                const snapshot = await FirebaseStore.db
+                    .collection(REPORTS_COLLECTION)
+                    .orderBy('createdAtMs', 'desc')
+                    .limit(REPORTS_LIMIT)
+                    .get();
+                if (snapshot.empty) return;
+                const batch = FirebaseStore.db.batch();
+                snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+                await batch.commit();
+                return;
+            } catch {
+                // Fall back to local if needed.
+            }
+        }
+
+        localStorage.setItem(APP_KEYS.REPORTS, JSON.stringify([]));
+    },
+
+    async init() {
         const list = document.getElementById('reports-list');
         if (!list) return;
 
-        const reports = Utils.readJson(APP_KEYS.REPORTS, []);
+        const clearBtn = document.getElementById('clear-reports-btn');
+        const user = Storage.getCurrentUser();
+        if (!Utils.isAdmin(user)) {
+            list.innerHTML = '<div class="empty-state-container"><h4>Access denied</h4><p>This page is restricted.</p></div>';
+            if (clearBtn) clearBtn.style.display = 'none';
+            const empty = document.getElementById('reports-empty');
+            if (empty) empty.style.display = 'none';
+            return;
+        }
+
+        const reports = await this.fetchReports();
         this.renderReports(reports);
 
-        const clearBtn = document.getElementById('clear-reports-btn');
-        clearBtn?.addEventListener('click', () => {
+        clearBtn?.addEventListener('click', async () => {
             if (!confirm(LanguageManager.t('report_clear_confirm'))) return;
-            localStorage.setItem(APP_KEYS.REPORTS, JSON.stringify([]));
-            this.renderReports([]);
+            await this.clearReports();
+            const refreshed = await this.fetchReports();
+            this.renderReports(refreshed);
         });
     }
 };
