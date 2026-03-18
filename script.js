@@ -994,14 +994,20 @@ const AuthManager = {
                 if (fbUser && fbUser.uid) {
                     const providerInfo = Array.isArray(fbUser.providerData) ? fbUser.providerData[0] : null;
                     const localUser = Storage.getCurrentUser();
-                    const users = Storage.getUsers();
-                    const byUid = users.find((u) => u && u.oauthUid && u.oauthUid === fbUser.uid);
-                    const byEmail = users.find((u) => u && u.email && fbUser.email && u.email === fbUser.email);
-                    const sameUser = localUser
+                    const isSameLocal = localUser
                         && (String(localUser.id || '') === String(fbUser.uid)
                             || (localUser.oauthUid && localUser.oauthUid === fbUser.uid)
                             || (localUser.email && fbUser.email && localUser.email === fbUser.email));
-                    const profileUser = sameUser ? localUser : (byUid || byEmail || localUser || {});
+                    if (isSameLocal) {
+                        localStorage.setItem(APP_KEYS.USER, JSON.stringify(localUser));
+                        localStorage.setItem('afg_auth_source', 'firebase');
+                        applySignedIn(localUser);
+                        return;
+                    }
+                    const users = Storage.getUsers();
+                    const byUid = users.find((u) => u && u.oauthUid && u.oauthUid === fbUser.uid);
+                    const byEmail = users.find((u) => u && u.email && fbUser.email && u.email === fbUser.email);
+                    const profileUser = byUid || byEmail || localUser || {};
                     const syncedUser = {
                         id: profileUser.id || fbUser.uid,
                         email: fbUser.email || profileUser.email || '',
