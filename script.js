@@ -343,7 +343,10 @@ const Storage = {
                 const snapshot = await docRef.get();
                 if (!snapshot.exists) return { ok: false, reason: 'not-found' };
                 const data = snapshot.data();
-                if (!Utils.isJobOwner(data, user)) return { ok: false, reason: 'not-owner' };
+                const fbUser = window.firebase?.auth ? window.firebase.auth().currentUser : null;
+                const authUser = fbUser ? { id: fbUser.uid, email: fbUser.email || '' } : user;
+                const isAdmin = Utils.isAdmin(user) || Utils.isAdmin(authUser);
+                if (!isAdmin && !Utils.isJobOwner(data, authUser)) return { ok: false, reason: 'not-owner' };
                 await docRef.delete();
                 return { ok: true };
             } catch {
