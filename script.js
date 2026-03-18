@@ -1075,6 +1075,19 @@ const AuthManager = {
         const profileLink = document.getElementById('profile-link');
         const settingsLink = document.getElementById('settings-link');
         const logoutBtn = document.getElementById('logout-btn');
+        const navAuth = document.querySelector('.nav-auth');
+        let adminLink = document.getElementById('admin-reports-link');
+
+        if (!adminLink && navAuth) {
+            adminLink = document.createElement('a');
+            adminLink.href = 'admin-reports.html';
+            adminLink.id = 'admin-reports-link';
+            adminLink.className = 'nav-link';
+            adminLink.style.color = 'var(--primary)';
+            adminLink.style.display = 'none';
+            adminLink.textContent = 'Admin Reports';
+            navAuth.insertBefore(adminLink, logoutBtn || null);
+        }
 
         if (!userDisplay || !authLink || !logoutBtn) return;
 
@@ -1084,6 +1097,7 @@ const AuthManager = {
             authLink.style.display = 'inline';
             if (profileLink) profileLink.style.display = 'none';
             if (settingsLink) settingsLink.style.display = 'none';
+            if (adminLink) adminLink.style.display = 'none';
             logoutBtn.style.display = 'none';
         };
 
@@ -1097,6 +1111,7 @@ const AuthManager = {
             authLink.style.display = 'none';
             if (profileLink) profileLink.style.display = 'inline';
             if (settingsLink) settingsLink.style.display = 'inline';
+            if (adminLink) adminLink.style.display = Utils.isAdmin(user) ? 'inline' : 'none';
             logoutBtn.style.display = 'inline';
         };
 
