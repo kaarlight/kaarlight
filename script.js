@@ -154,6 +154,8 @@ const Storage = {
     },
 
     async getAllJobsAsync() {
+        const localJobs = this.getAllJobs();
+
         if (FirebaseStore.enabled && FirebaseStore.db) {
             try {
                 const snapshot = await FirebaseStore.db
@@ -164,13 +166,32 @@ const Storage = {
                     id: doc.id,
                     ...doc.data()
                 }));
-                if (jobs.length > 0) return jobs;
+
+                if (jobs.length > 0) {
+                    const byId = new Map();
+                    jobs.forEach((job) => {
+                        byId.set(String(job.id), { ...job });
+                    });
+
+                    localJobs.forEach((job) => {
+                        const key = String(job.id);
+                        if (!byId.has(key)) {
+                            byId.set(key, job);
+                            return;
+                        }
+                        const existing = byId.get(key);
+                        if (!existing.media && job.media) existing.media = job.media;
+                        if (!existing.mediaType && job.mediaType) existing.mediaType = job.mediaType;
+                    });
+
+                    return Array.from(byId.values());
+                }
             } catch {
                 // Fall back to local storage below.
             }
         }
 
-        return this.getAllJobs();
+        return localJobs;
     },
 
     saveJob(job) {

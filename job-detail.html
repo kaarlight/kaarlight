@@ -512,11 +512,23 @@
         if (!FirebaseStore.enabled) {
           await FirebaseStore.init();
         }
+
+        const localJobs = Storage.getAllJobs();
+        const localJob = localJobs.find(job => String(job.id) === String(id));
+
         if (FirebaseStore.enabled && FirebaseStore.db) {
           try {
             const doc = await FirebaseStore.db.collection('jobs').doc(String(id)).get();
             if (doc.exists) {
-              return { id: doc.id, ...doc.data() };
+              const firebaseJob = { id: doc.id, ...doc.data() };
+              if (localJob) {
+                return {
+                  ...firebaseJob,
+                  media: firebaseJob.media || localJob.media || '',
+                  mediaType: firebaseJob.mediaType || localJob.mediaType || ''
+                };
+              }
+              return firebaseJob;
             }
           } catch {
             // Fall back to local storage below.
@@ -524,7 +536,7 @@
         }
 
         const allJobs = await Storage.getAllJobsAsync();
-        return allJobs.find(job => String(job.id) === String(id));
+        return allJobs.find(job => String(job.id) === String(id)) || localJob || null;
       },
 
       formatDate(isoString) {
