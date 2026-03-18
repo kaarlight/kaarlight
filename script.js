@@ -1106,6 +1106,7 @@ const FormHandler = {
     mediaData: null,
     mediaType: null,
     mediaTouched: false,
+    mediaFile: null,
     editingJob: null,
 
     async init() {
@@ -1208,6 +1209,7 @@ const FormHandler = {
             this.mediaData = null;
             this.mediaType = null;
             this.mediaTouched = true;
+            this.mediaFile = null;
             const container = document.getElementById('media-preview-container');
             if (container) container.style.display = 'none';
             if (fileInput) fileInput.value = '';
@@ -1273,6 +1275,25 @@ const FormHandler = {
             if (isEditing && !this.mediaTouched) {
                 media = existingJob.media || '';
                 mediaType = existingJob.mediaType || '';
+            } else if (this.mediaFile) {
+                const storageReady = await FirebaseStorageLoader.load();
+                if (storageReady && window.firebase?.storage) {
+                    try {
+                        const storage = window.firebase.storage();
+                        const safeName = String(this.mediaFile.name || 'upload')
+                            .replace(/[^a-zA-Z0-9._-]+/g, '_')
+                            .slice(0, 80);
+                        const userId = user?.id ? String(user.id) : 'anonymous';
+                        const path = `jobs/${userId}/${Date.now()}-${safeName}`;
+                        const ref = storage.ref().child(path);
+                        await ref.put(this.mediaFile, { contentType: this.mediaFile.type });
+                        media = await ref.getDownloadURL();
+                        mediaType = this.mediaFile.type;
+                    } catch {
+                        alert('Media upload failed. Please try again or choose a smaller file.');
+                        return;
+                    }
+                }
             }
 
             const jobData = {
@@ -1319,6 +1340,7 @@ const FormHandler = {
             this.mediaData = null;
             this.mediaType = null;
             this.mediaTouched = false;
+            this.mediaFile = null;
             this.editingJob = null;
             const previewContainer = document.getElementById('media-preview-container');
             if (previewContainer) previewContainer.style.display = 'none';
@@ -1378,6 +1400,7 @@ const FormHandler = {
             this.mediaData = job.media;
             this.mediaType = job.mediaType || '';
             this.mediaTouched = false;
+            this.mediaFile = null;
             this.setMediaPreview(job.media, job.mediaType || '');
         }
 
@@ -1431,6 +1454,7 @@ const FormHandler = {
             return;
         }
 
+        this.mediaFile = file;
         const reader = new FileReader();
         reader.onload = (event) => {
             const result = event.target?.result;
@@ -1444,6 +1468,26 @@ const FormHandler = {
         };
 
         reader.readAsDataURL(file);
+    }
+};
+
+const FirebaseStorageLoader = {
+    loading: null,
+
+    load() {
+        if (!window.firebase) return Promise.resolve(false);
+        if (window.firebase.storage) return Promise.resolve(true);
+        if (this.loading) return this.loading;
+
+        this.loading = new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://www.gstatic.com/firebasejs/10.12.3/firebase-storage-compat.js';
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.head.appendChild(script);
+        });
+
+        return this.loading;
     }
 };
 
