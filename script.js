@@ -151,6 +151,16 @@ const Utils = {
         }
     },
 
+    getJobTimestamp(job) {
+        const createdAtMs = Number(job?.createdAtMs);
+        if (Number.isFinite(createdAtMs) && createdAtMs > 0) {
+            return createdAtMs;
+        }
+
+        const parsedCreatedAt = Date.parse(String(job?.createdAt || ''));
+        return Number.isFinite(parsedCreatedAt) ? parsedCreatedAt : 0;
+    },
+
     readJson(key, fallback) {
         try {
             const raw = localStorage.getItem(key);
@@ -273,7 +283,7 @@ const Storage = {
                         if (!existing.mediaType && job.mediaType) existing.mediaType = job.mediaType;
                     });
 
-                    return Array.from(byId.values());
+                    return Array.from(byId.values()).sort((a, b) => this.sortJobsByNewest(a, b));
                 }
             } catch {
                 // Fall back to local storage below.
@@ -281,6 +291,10 @@ const Storage = {
         }
 
         return localJobs;
+    },
+
+    sortJobsByNewest(a, b) {
+        return Utils.getJobTimestamp(b) - Utils.getJobTimestamp(a);
     },
 
     saveJob(job) {
@@ -545,7 +559,7 @@ const Renderer = {
             : '';
 
         return `
-            <a href="job-detail.html?id=${job.id}" style="text-decoration: none; color: inherit; display: block;">
+            <a href="job-detail.html?id=${encodeURIComponent(String(job.id ?? ''))}" style="text-decoration: none; color: inherit; display: block;">
                 <article class="card job-card" style="cursor: pointer; transition: all 0.3s ease;">
                     ${mediaHtml}
                     <div class="card-body">
@@ -600,7 +614,8 @@ const SearchEngine = {
         const settings = Storage.getSettings();
 
         const performSearch = async () => {
-            const query = String(searchInput?.value || '').toLowerCase().trim();
+            const rawQuery = String(searchInput?.value || '').trim();
+            const query = rawQuery.toLowerCase();
             const category = categoryFilter?.value || 'All';
             const sortBy = sortFilter?.value || 'newest';
             const allJobs = await Storage.getAllJobsAsync();
@@ -622,13 +637,18 @@ const SearchEngine = {
                     return Number(a.price || 0) - Number(b.price || 0);
                 }
 
-                const aDate = new Date(a.createdAt || 0).getTime();
-                const bDate = new Date(b.createdAt || 0).getTime();
-                return bDate - aDate;
+                return Storage.sortJobsByNewest(a, b);
             });
 
             Renderer.renderList('jobs-list', filtered);
             Renderer.renderList('featured-list', filtered.slice(0, 3));
+
+            Storage.saveSettings({
+                ...Storage.getSettings(),
+                jobSearch: rawQuery,
+                jobCategory: category,
+                jobSort: sortBy
+            });
 
             const hasFilters = Boolean(query) || category !== 'All';
             if (clearFiltersBtn) {
