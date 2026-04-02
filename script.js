@@ -728,6 +728,65 @@ const LayoutManager = {
         if (themeToggle && themeToggle.parentElement !== navRight) {
             navRight.appendChild(themeToggle);
         }
+    },
+
+    ensureMobileMenu() {
+        const header = document.querySelector('.site-header');
+        const navRow = document.querySelector('.nav-row');
+        if (!header || !navRow) return;
+
+        let menuToggle = navRow.querySelector('.mobile-menu-toggle');
+        if (!menuToggle) {
+            menuToggle = document.createElement('button');
+            menuToggle.type = 'button';
+            menuToggle.className = 'mobile-menu-toggle';
+            menuToggle.setAttribute('aria-label', 'Open navigation menu');
+            menuToggle.setAttribute('aria-expanded', 'false');
+            menuToggle.innerHTML = [
+                '<span class="mobile-menu-toggle-inner" aria-hidden="true">',
+                '<span class="mobile-menu-toggle-line"></span>',
+                '<span class="mobile-menu-toggle-line"></span>',
+                '<span class="mobile-menu-toggle-line"></span>',
+                '</span>'
+            ].join('');
+            navRow.insertBefore(menuToggle, navRow.firstChild);
+        }
+
+        if (menuToggle.dataset.bound === 'true') return;
+        menuToggle.dataset.bound = 'true';
+
+        const closeMenu = () => {
+            header.classList.remove('menu-open');
+            menuToggle.setAttribute('aria-expanded', 'false');
+            menuToggle.setAttribute('aria-label', 'Open navigation menu');
+        };
+
+        menuToggle.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const isOpen = header.classList.toggle('menu-open');
+            menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            menuToggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+        });
+
+        navRow.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) closeMenu();
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            if (window.innerWidth > 768) return;
+            if (!header.classList.contains('menu-open')) return;
+            if (!header.contains(event.target)) closeMenu();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeMenu();
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) closeMenu();
+        });
     }
 };
 
@@ -2585,6 +2644,7 @@ const StatsManager = {
 
 document.addEventListener('DOMContentLoaded', async () => {
     LayoutManager.ensureNavRight();
+    LayoutManager.ensureMobileMenu();
     await FirebaseStore.init();
     await FirebaseAuthLoader.load();
     LanguageManager.init();
