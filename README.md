@@ -44,3 +44,12 @@ Home, Jobs, Job Detail, Post Job, Authentication, Profile, Settings, About, Cont
 
 **Note**
 This project still includes local/session storage behavior for some client-side flows. For production use, keep Firebase rules locked down and protect the Worker with auth or rate limits before accepting public uploads.
+
+**Security**
+This project includes security best practices:
+- Content Security Policy (CSP) headers to prevent XSS attacks
+- Input validation and sanitization for all user data
+- File upload validation (type & size checks)
+- MIME-type sniffing protection
+- Clickjacking prevention (X-Frame-Options)
+- See [SECURITY.md](./SECURITY.md) and [SECURITY-HEADERS-DEPLOYMENT.md](./SECURITY-HEADERS-DEPLOYMENT.md) for details.

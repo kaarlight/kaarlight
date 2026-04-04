@@ -91,6 +91,12 @@ const R2Uploader = {
             throw new Error(this.getSetupError());
         }
 
+        // Validate file with Utils methods
+        const validation = Utils.validateFileUpload(file);
+        if (!validation.valid) {
+            throw new Error(validation.error);
+        }
+
         const maxSizeBytes = Number(config.maxFileSizeMb || 2) * 1024 * 1024;
         if (file?.size > maxSizeBytes) {
             throw new Error(`File must be ${config.maxFileSizeMb || 2}MB or smaller.`);
@@ -99,14 +105,18 @@ const R2Uploader = {
         const folder = this.buildPath(config, options.folder);
         const safeName = this.sanitizeFileName(file?.name);
         const objectKey = [folder, `${Date.now()}-${safeName}`].filter(Boolean).join('/');
+        
+        // Sanitize content type
+        const contentType = String(file?.type || 'application/octet-stream').replace(/[^\w\-./+]/g, '');
+        
         const response = await fetch(String(config.workerUrl).trim(), {
             method: 'POST',
             body: file,
             headers: {
-                'Content-Type': file?.type || 'application/octet-stream',
+                'Content-Type': contentType,
                 'X-File-Key': objectKey,
                 'X-File-Name': safeName,
-                'X-File-Type': file?.type || 'application/octet-stream',
+                'X-File-Type': contentType,
                 'X-Upload-Tags': Array.isArray(options.tags) ? options.tags.join(',') : ''
             }
         });
@@ -196,6 +206,63 @@ const Utils = {
         if (!user?.email) return false;
         const email = String(user.email).trim().toLowerCase();
         return ADMIN_EMAILS.includes(email);
+    },
+
+    /** Enhanced security validations */
+    sanitizeText(value, maxLength = 500) {
+        if (typeof value !== 'string') return '';
+        return value
+            .trim()
+            .slice(0, maxLength)
+            .replace(/[\x00-\x1F\x7F]/g, ''); // Remove control characters
+    },
+
+    validateJobTitle(title) {
+        const sanitized = this.sanitizeText(title, 100);
+        if (sanitized.length < 5 || sanitized.length > 100) return { valid: false, error: 'Title must be 5-100 characters.' };
+        if (!/^[a-zA-Z0-9\s\-().,&\u0600-\u06FF]+$/.test(sanitized)) return { valid: false, error: 'Title contains invalid characters.' };
+        return { valid: true, value: sanitized };
+    },
+
+    validateDescription(desc) {
+        const sanitized = this.sanitizeText(desc, 1000);
+        if (sanitized.length < 20 || sanitized.length > 1000) return { valid: false, error: 'Description must be 20-1000 characters.' };
+        return { valid: true, value: sanitized };
+    },
+
+    validatePrice(price) {
+        const num = Number(price);
+        if (!Number.isFinite(num) || num < 0 || num > 999999999) return { valid: false, error: 'Price must be a valid number between 0 and 999,999,999.' };
+        return { valid: true, value: num };
+    },
+
+    validateLocation(location) {
+        const sanitized = this.sanitizeText(location, 100);
+        if (sanitized.length < 2 || sanitized.length > 100) return { valid: false, error: 'Location must be 2-100 characters.' };
+        return { valid: true, value: sanitized };
+    },
+
+    validateContactInfo(contact) {
+        const sanitized = this.sanitizeText(contact, 150);
+        if (!this.isEmail(sanitized) && !this.isPhone(sanitized)) return { valid: false, error: 'Contact must be a valid email or phone number.' };
+        return { valid: true, value: sanitized };
+    },
+
+    validateFileUpload(file) {
+        if (!file) return { valid: false, error: 'No file selected.' };
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
+        if (!allowedMimes.includes(file.type)) return { valid: false, error: 'File type not allowed. Use JPG, PNG, GIF, WebP, or MP4.' };
+        const maxSize = 2 * 1024 * 1024; // 2MB
+        if (file.size > maxSize) return { valid: false, error: 'File exceeds 2MB limit.' };
+        return { valid: true, value: file };
+    },
+
+    stripDangerousAttributes(html) {
+        // Remove event handlers and dangerous attributes
+        return String(html || '')
+            .replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove onEvent="..." attributes
+            .replace(/\s*on\w+\s*=\s*[^\s>]*/gi, '') // Remove onEvent=value attributes
+            .replace(/\s*javascript:/gi, ''); // Remove javascript: protocol
     }
 };
 
@@ -684,7 +751,9 @@ const SearchEngine = {
         const params = new URLSearchParams(window.location.search);
         const queryFromUrl = params.get('search');
         if (queryFromUrl && searchInput) {
-            searchInput.value = queryFromUrl;
+            // Sanitize URL parameter to prevent XSS
+            const sanitized = Utils.sanitizeText(queryFromUrl, 100);
+            searchInput.value = sanitized;
             performSearch();
             return;
         }

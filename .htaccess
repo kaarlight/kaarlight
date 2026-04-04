@@ -1,0 +1,51 @@
+# AfgJobs Security Headers (.htaccess)
+# Add this to your Apache server configuration
+
+# Enable mod_headers
+<IfModule mod_headers.c>
+    # Content Security Policy - Prevent XSS attacks
+    Header set Content-Security-Policy "default-src 'self' https:; script-src 'self' https://www.gstatic.com https://www.googletagmanager.com https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    
+    # Prevent MIME type sniffing
+    Header set X-Content-Type-Options "nosniff"
+    
+    # Prevent clickjacking (Clickjack protection)
+    Header set X-Frame-Options "DENY"
+    
+    # Enable XSS protection in older browsers
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Enforce HTTPS
+    Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    
+    # Referrer Policy
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Permissions Policy (Feature Policy)
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+</IfModule>
+
+# Disable directory listing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "^(\.|firebase-init|oauth-config|r2-config|\.git)">
+    Deny from all
+</FilesMatch>
+
+# Cache control for static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType text/html "access plus 1 day"
+</IfModule>
+
+# GZIP compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css text/javascript application/javascript application/json
+</IfModule>
