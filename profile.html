@@ -94,9 +94,9 @@
 
     <section class="profile-content">
       <div class="profile-tabs">
-        <button class="profile-tab active" data-tab="my-jobs">My Jobs</button>
-        <button class="profile-tab" data-tab="profile-info">Profile Info</button>
-        <button class="profile-tab" data-tab="settings">Settings</button>
+        <button type="button" class="profile-tab active" data-tab="my-jobs">My Jobs</button>
+        <button type="button" class="profile-tab" data-tab="profile-info">Profile Info</button>
+        <button type="button" class="profile-tab" data-tab="settings">Settings</button>
       </div>
 
       <div id="my-jobs" class="profile-tab-content active">
@@ -286,12 +286,17 @@
         return;
       }
 
-      loadProfileData(activeUser);
-      await loadUserJobs(activeUser.id, activeUser.email);
       setupTabNavigation();
       setupFormHandlers();
       setupModalHandlers();
       setupBioCounters();
+
+      try {
+        loadProfileData(activeUser);
+        await loadUserJobs(activeUser.id, activeUser.email);
+      } catch (error) {
+        console.error('Profile page initialization failed:', error);
+      }
     });
 
     function readJson(key, fallback) {
@@ -501,6 +506,8 @@
       document.querySelectorAll('.profile-tab').forEach((tab) => {
         tab.addEventListener('click', function () {
           const tabName = this.dataset.tab;
+          const targetContent = tabName ? document.getElementById(tabName) : null;
+          if (!targetContent) return;
 
           document.querySelectorAll('.profile-tab-content').forEach((content) => {
             content.classList.remove('active');
@@ -509,7 +516,7 @@
             t.classList.remove('active');
           });
 
-          document.getElementById(tabName).classList.add('active');
+          targetContent.classList.add('active');
           this.classList.add('active');
         });
       });
@@ -737,6 +744,5 @@
   </script>
 </body>
 </html>
-
 
 
