@@ -93,6 +93,40 @@ select:focus-visible {
   left: 10px;
 }
 
+.jump-top-btn {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+  z-index: 1000;
+}
+
+.jump-top-btn.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.jump-top-btn:hover,
+.jump-top-btn:focus-visible {
+  background: var(--primary-hover);
+  outline: none;
+}
+
 .site-header {
   background: var(--bg);
   border-bottom: 1px solid var(--border);
@@ -1789,14 +1823,15 @@ label {
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
   }
   .hero-grid {
-    gap: 1rem;
+    gap: 1.15rem;
   }
   .hero-copy {
     align-items: stretch;
+    gap: 1rem;
   }
   .hero-eyebrow {
     align-self: center;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0;
     text-align: center;
   }
   .hero h2 {
@@ -1804,14 +1839,14 @@ label {
     line-height: 1.18;
     letter-spacing: -0.03em;
     max-width: 12ch;
-    margin: 0 auto 0.55rem;
+    margin: 0 auto;
     text-align: center;
   }
   .hero .lead {
     font-size: 0.92rem;
     line-height: 1.55;
     max-width: 31ch;
-    margin: 0 auto 0.85rem;
+    margin: 0 auto;
     text-align: center;
   }
   .hero-actions {
@@ -1833,33 +1868,43 @@ label {
     box-shadow: none;
   }
   .quick-search {
-    margin-top: 0.15rem;
+    margin-top: 0.1rem;
   }
   .quick-search .search-wrap {
     max-width: none;
-    padding: 5px;
-    border-radius: 999px;
+    padding: 0.55rem;
+    border-radius: 18px;
     box-shadow: 0 7px 18px rgba(15, 23, 42, 0.08);
   }
   .quick-search input {
     min-width: 0;
+    min-height: 46px;
     padding: 0 0.85rem;
     font-size: 0.9rem;
+    border-radius: 12px;
+    background: var(--bg);
   }
   .quick-search .btn {
-    min-height: 42px;
-    padding: 0.65rem 1rem;
-    border-radius: 999px;
+    min-height: 44px;
+    padding: 0.7rem 1rem;
+    border-radius: 12px;
   }
   .hero-proof,
   .hero-suggestions {
     justify-content: center;
+    gap: 0.5rem;
+  }
+  .hero-suggestions-label {
+    width: 100%;
+    text-align: center;
   }
   .hero-proof-item,
   .hero-suggestion-chip,
   .hero-tag,
   .category-chip {
     font-size: 0.85rem;
+    min-height: 34px;
+    padding: 0.5rem 0.8rem;
   }
   .hero-panel-inner {
     padding: 1.1rem;
@@ -1869,10 +1914,14 @@ label {
     font-size: 1.3rem;
   }
   .hero-panel-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.55rem;
   }
   .hero-panel-stat {
     padding: 0.85rem 0.65rem;
+  }
+  .hero-panel-stat:last-child {
+    grid-column: 1 / -1;
   }
   .hero-panel-stat-value {
     font-size: 1.45rem;
@@ -1881,15 +1930,30 @@ label {
     padding: 1.2rem;
     margin-bottom: 1.5rem;
   }
+  .section-heading {
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
   .section-heading h3 {
     font-size: 1.4rem;
+    max-width: 12ch;
+    text-wrap: balance;
   }
   .section-lead {
     max-width: none;
+    font-size: 0.94rem;
+    line-height: 1.55;
   }
   .category-chip-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.65rem;
     margin-bottom: 1.2rem;
+  }
+  .category-chip {
+    justify-content: center;
+    min-height: 44px;
+    text-align: center;
   }
   .audience-card {
     padding: 1.15rem;
@@ -1897,11 +1961,19 @@ label {
   .audience-card h4 {
     font-size: 1.15rem;
   }
+  .audience-card .btn {
+    width: 100%;
+    justify-content: center;
+  }
   .site-header {
     position: sticky;
     top: 0;
     overflow: visible;
     background: rgba(255, 255, 255, 0.96);
+  }
+  .jump-top-btn {
+    right: 1rem;
+    bottom: calc(1.5rem + 5rem + env(safe-area-inset-bottom));
   }
   .mobile-menu-toggle {
     display: inline-flex;
@@ -2049,8 +2121,118 @@ label {
   .featured-grid, .grid-3 {
     grid-template-columns: 1fr;
   }
-  .stats-grid {
+  .jobs-page-header {
+    padding: 1.35rem 0 1rem;
+  }
+  .jobs-page-header h2,
+  .about-hero h2 {
+    font-size: 1.6rem;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+  .about-hero {
+    padding: 1.5rem 0 1.15rem;
+    margin-bottom: 1.5rem;
+  }
+  .about-hero .lead,
+  .jobs-page-header .lead {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    max-width: 34ch;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .about-content {
+    max-width: none;
+  }
+  .about-section {
+    margin-bottom: 2rem;
+  }
+  .about-section h3 {
+    font-size: 1.25rem;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .about-section p,
+  .about-list li {
+    line-height: 1.65;
+  }
+  .about-list li {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    padding-left: 1.55rem;
+  }
+  .values-grid {
     grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+  .value-item {
+    padding: 1rem;
+  }
+  .about-cta {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .about-cta .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .filters-section.card {
+    padding: 1rem;
+    border-radius: 18px;
+  }
+  .toolbar-footer {
+    gap: 0.8rem;
+  }
+  .job-count {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+  .empty-state-container {
+    padding: 2.25rem 1rem;
+  }
+  .empty-icon {
+    font-size: 2.6rem;
+  }
+  .empty-state-container h4 {
+    font-size: 1.2rem;
+  }
+  .profile-content {
+    max-width: none;
+  }
+  .profile-tab-content h3 {
+    font-size: 1.2rem;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .form-actions,
+  .photo-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .form-actions .btn,
+  .photo-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .settings-section {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 16px;
+  }
+  .settings-section h4 {
+    font-size: 1rem;
+  }
+  .settings-section p {
+    margin-bottom: 1rem;
+    line-height: 1.55;
+  }
+  .modal-content {
+    width: min(92vw, 500px);
+    padding: 1.25rem;
+    max-height: min(82vh, 720px);
+    overflow-y: auto;
   }
   body {
     background: var(--bg);
@@ -2145,7 +2327,9 @@ label {
   }
   .quick-search .search-wrap {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
     background: var(--card);
     border: 1px solid var(--border);
   }
@@ -2154,7 +2338,8 @@ label {
   }
   .quick-search .btn {
     flex: 0 0 auto;
-    min-width: 96px;
+    width: 100%;
+    min-width: 0;
     background: var(--primary);
     box-shadow: none;
   }
@@ -2182,14 +2367,15 @@ label {
     margin-bottom: 1rem;
   }
   .stats-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.6rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
   }
   .categories-stat-card {
     display: block;
+    grid-column: 1 / -1;
   }
   .stat-card {
-    padding: 0.8rem 0.45rem 0.75rem;
+    padding: 0.9rem 0.7rem 0.8rem;
     border-radius: 14px;
     background: var(--card);
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.09);
@@ -2211,13 +2397,13 @@ label {
   }
   .stat-label {
     color: var(--text);
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     font-weight: 600;
     line-height: 1.25;
   }
   .stat-value {
     margin-top: 0.25rem;
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     line-height: 1;
   }
   .feedback-section,
@@ -2236,6 +2422,7 @@ label {
   .newsletter-section {
     margin: 1.5rem 0;
     padding: 1.2rem;
+    border-radius: 18px;
   }
   .featured {
     margin-top: 1.35rem;
@@ -2246,10 +2433,13 @@ label {
   }
   .featured-header .btn {
     display: inline-flex;
+    width: 100%;
+    justify-content: center;
   }
   .featured h3 {
     font-size: 1.25rem;
     letter-spacing: -0.02em;
+    text-wrap: balance;
   }
   #featured-list {
     gap: 0.7rem;
@@ -2262,6 +2452,11 @@ label {
   }
   .testimonials {
     margin-top: 2rem;
+  }
+  .testimonials blockquote {
+    padding-left: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
   }
   .mobile-bottom-nav {
     display: grid;
@@ -2318,6 +2513,50 @@ label {
   .newsletter-form {
     flex-direction: column;
   }
+  .feedback-form {
+    padding: 1rem;
+    border-radius: 14px;
+  }
+  .newsletter-form .btn,
+  .feedback-form .btn,
+  #seeker-form .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+  .feedback-section h4,
+  .newsletter-section h3,
+  .faq-section h3,
+  .how-it-works h3,
+  .trust-section h3 {
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  .site-footer {
+    margin-top: 3rem;
+    padding: 2rem 0 calc(1.25rem + env(safe-area-inset-bottom));
+  }
+  .footer-inner {
+    gap: 0.7rem;
+  }
+  .footer-tagline,
+  .footer-copyright {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .footer-links {
+    gap: 0.35rem 0.6rem;
+  }
+  .faq-item {
+    padding: 0.95rem 1rem;
+  }
+  .faq-item summary {
+    font-size: 0.96rem;
+    line-height: 1.45;
+  }
+  .faq-item p {
+    font-size: 0.92rem;
+  }
   .post-form {
     padding: 1rem;
     margin: 1rem 0;
@@ -2368,6 +2607,82 @@ label {
   }
   .job-actions {
     flex-direction: column;
+  }
+  .job-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 0.85rem;
+  }
+
+  .hero {
+    padding: 1rem 0.85rem 0.9rem;
+  }
+
+  .hero h2 {
+    font-size: 1.4rem;
+    max-width: 13ch;
+  }
+
+  .hero .lead {
+    font-size: 0.88rem;
+    max-width: 33ch;
+  }
+
+  .hero-panel-stats,
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .hero-panel-stat:last-child {
+    grid-column: auto;
+  }
+
+  .category-chip-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .categories-stat-card {
+    grid-column: auto;
+  }
+
+  .hero-panel h3,
+  .jobs-page-header h2,
+  .section-heading h3,
+  .featured h3,
+  .how-it-works h3,
+  .trust-section h3,
+  .faq-section h3 {
+    font-size: 1.2rem;
+  }
+  .about-hero h2 {
+    font-size: 1.25rem;
+  }
+  .about-hero .lead,
+  .jobs-page-header .lead {
+    max-width: 30ch;
+    font-size: 0.9rem;
+  }
+  .filters-section.card,
+  .settings-section,
+  .feedback-form,
+  .modal-content {
+    padding: 0.9rem;
+  }
+  .profile-tab {
+    font-size: 0.76rem;
+    padding: 0.65rem 0.4rem;
+  }
+  .profile-avatar {
+    width: 72px;
+    height: 72px;
+  }
+
+  .mobile-bottom-link {
+    font-size: 0.64rem;
   }
 }
 

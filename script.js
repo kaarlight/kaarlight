@@ -791,6 +791,29 @@ const ThemeManager = {
     }
 };
 
+const TopButton = {
+    init() {
+        const button = document.getElementById('jump-to-top');
+        if (!button) return;
+
+        const toggleVisibility = () => {
+            if (window.scrollY > 300) {
+                button.classList.add('show');
+            } else {
+                button.classList.remove('show');
+            }
+        };
+
+        button.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            button.blur();
+        });
+
+        window.addEventListener('scroll', toggleVisibility, { passive: true });
+        toggleVisibility();
+    }
+};
+
 const LayoutManager = {
     ensureNavRight() {
         const navRow = document.querySelector('.nav-row');
@@ -2829,6 +2852,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await FirebaseAuthLoader.load();
     LanguageManager.init();
     ThemeManager.init();
+    TopButton.init();
     AuthManager.init();
     await StatsManager.init();
     await HomePageManager.init();
