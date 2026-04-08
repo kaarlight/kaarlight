@@ -496,7 +496,7 @@ select:focus-visible {
 .hero-proof {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.65rem;
+  gap: 0.4rem;
   margin-top: 1rem;
 }
 
@@ -505,20 +505,17 @@ select:focus-visible {
 .hero-tag {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   min-height: 36px;
-  min-width: 0;
-  padding: 0.55rem 0.75rem;
+  padding: 0.38rem 0.62rem;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.24);
   background: rgba(255, 255, 255, 0.82);
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: 0.76rem;
   text-decoration: none;
 }
 
 .hero-proof-item {
-  flex: 1 1 0;
   white-space: nowrap;
 }
 
