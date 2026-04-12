@@ -207,9 +207,6 @@ const CloudinaryUploader = {
         if (tags.length > 0) {
             formData.append('tags', tags.join(','));
         }
-        // Add a public_id hint for better organization
-        const safeName = this.sanitizeFileName(file?.name);
-        formData.append('public_id', `${Date.now()}-${safeName}`);
 
         // Upload to Cloudinary
         const uploadUrl = `${config.apiBase}/${config.cloudName}/auto/upload`;
