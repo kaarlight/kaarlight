@@ -56,7 +56,7 @@ server {
     location ~ /\. {
         deny all;
     }
-    location ~ /(firebase-init|oauth-config|r2-config|\.git) {
+    location ~ /(firebase-init|oauth-config|cloudinary-config|\.git) {
         deny all;
     }
 

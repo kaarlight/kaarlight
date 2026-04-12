@@ -1943,6 +1943,19 @@ label {
   .hero-panel-stat-value {
     font-size: 1.45rem;
   }
+  .stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+  .stat-card {
+    padding: 0.75rem 0.9rem;
+  }
+  .stat-label {
+    font-size: 0.78rem;
+  }
+  .stat-value {
+    font-size: 1.55rem;
+  }
   .discover-section {
     padding: 1.2rem;
     margin-bottom: 1.5rem;
@@ -2740,9 +2753,12 @@ label {
     max-width: 33ch;
   }
 
-  .hero-panel-stats,
-  .stats-grid {
+  .hero-panel-stats {
     grid-template-columns: 1fr;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
   }
   .hero-panel-stat:last-child {
     grid-column: auto;

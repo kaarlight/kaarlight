@@ -119,13 +119,13 @@ Critical security fixes have been applied to protect against:
 ### 6. Storage Access Control
 **What's protected** (in `.htaccess`):
 ```apache
-<FilesMatch "^(\.|firebase-init|oauth-config|r2-config|\.git)">
+<FilesMatch "^(\.|firebase-init|oauth-config|cloudinary-config|\.git)">
     Deny from all
 </FilesMatch>
 ```
 - Blocks direct access to:
   - Hidden files (`.env`, `.htaccess`, `.git`)
-  - Configuration files (`firebase-init.js`, `oauth-config.js`, `r2-config.js`)
+  - Configuration files (`firebase-init.js`, `oauth-config.js`, `cloudinary-config.js`)
   - Git repository metadata
 
 ---
@@ -176,9 +176,9 @@ Critical security fixes have been applied to protect against:
   }
   ```
 
-- [ ] **Protect Cloudflare Worker** with authentication or rate limiting
-  - Add API key validation in the Worker
-  - Implement rate limiting (e.g., 10 uploads per IP per minute)
+- [ ] **Cloudinary Configuration** already set up with unsigned upload preset
+  - Validate file types and sizes on frontend (already implemented)
+  - Monitor upload usage in Cloudinary Dashboard
   
 - [ ] **Test CSP** in browser DevTools (check Console for CSP violations)
 - [ ] **Validate all forms** on the backend (Firebase Cloud Functions or backend API)
@@ -205,12 +205,12 @@ allow write: if request.auth != null &&
 ```
 
 ### 3. Environment Variables
-- **Never commit** `firebase-init.js`, `oauth-config.js`, or `r2-config.js` with real credentials
+- **Never commit** `firebase-init.js`, `oauth-config.js`, or `cloudinary-config.js` with sensitive credentials
 - Use `.gitignore` to exclude these files:
   ```
   firebase-init.js
   oauth-config.js
-  r2-config.js
+  cloudinary-config.js
   .env
   .env.local
   ```

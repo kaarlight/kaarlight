@@ -262,7 +262,7 @@
     </a>
   </nav>
 
-  <script src="r2-config.js"></script>
+  <script src="cloudinary-config.js"></script>
   <script src="script.js" defer></script>
   <script>
     const KEYS = {
@@ -535,13 +535,13 @@
         }
 
         const msgEl = document.getElementById('profile-msg');
-        if (window.R2Uploader && R2Uploader.isConfigured()) {
+        if (window.CloudinaryUploader && CloudinaryUploader.isConfigured()) {
           if (msgEl) {
             msgEl.textContent = 'Uploading photo...';
             msgEl.className = 'form-msg';
           }
           try {
-            const result = await R2Uploader.uploadFile(file, {
+            const result = await CloudinaryUploader.uploadFile(file, {
               folder: 'avatars',
               tags: ['profile-avatar'],
               resourceType: 'image'

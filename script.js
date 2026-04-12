@@ -144,6 +144,102 @@ const R2Uploader = {
 
 window.R2Uploader = R2Uploader;
 
+const CloudinaryUploader = {
+    getConfig() {
+        return window.CLOUDINARY_CONFIG || {};
+    },
+
+    isPlaceholder(value) {
+        const normalized = String(value || '').trim().toUpperCase();
+        return !normalized || normalized.includes('UNSIGNED') || normalized.includes('PLACEHOLDER');
+    },
+
+    isConfigured() {
+        const config = this.getConfig();
+        return Boolean(
+            config.cloudName
+            && config.uploadPreset
+            && !this.isPlaceholder(config.cloudName)
+            && !this.isPlaceholder(config.uploadPreset)
+        );
+    },
+
+    getSetupError() {
+        const config = this.getConfig();
+        if (this.isConfigured()) return '';
+        return 'Cloudinary is not configured yet. Update cloudinary-config.js with your Cloud Name and Upload Preset.';
+    },
+
+    sanitizeFileName(name) {
+        return String(name || 'upload')
+            .replace(/[^a-zA-Z0-9._-]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 80) || 'upload';
+    },
+
+    async uploadFile(file, options = {}) {
+        const config = this.getConfig();
+        if (!this.isConfigured()) {
+            throw new Error(this.getSetupError());
+        }
+
+        // Validate file with Utils methods
+        const validation = Utils.validateFileUpload(file);
+        if (!validation.valid) {
+            throw new Error(validation.error);
+        }
+
+        const maxSizeBytes = Number(config.maxFileSizeMb || 5) * 1024 * 1024;
+        if (file?.size > maxSizeBytes) {
+            throw new Error(`File must be ${config.maxFileSizeMb || 5}MB or smaller.`);
+        }
+
+        // Build folder path
+        const folder = String(options.folder || 'afgjobs').trim().replace(/^\/+|\/+$/g, '');
+        const tags = Array.isArray(options.tags) ? options.tags : [];
+
+        // Prepare FormData for Cloudinary
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', String(config.uploadPreset).trim());
+        formData.append('folder', folder);
+        if (tags.length > 0) {
+            formData.append('tags', tags.join(','));
+        }
+        // Add a public_id hint for better organization
+        const safeName = this.sanitizeFileName(file?.name);
+        formData.append('public_id', `${Date.now()}-${safeName}`);
+
+        // Upload to Cloudinary
+        const uploadUrl = `${config.apiBase}/${config.cloudName}/auto/upload`;
+        const response = await fetch(uploadUrl, {
+            method: 'POST',
+            body: formData
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const errorMessage = payload?.error?.message || payload?.error || 'Cloudinary upload failed.';
+            throw new Error(errorMessage);
+        }
+
+        // Extract upload info from Cloudinary response
+        const resourceType = options.resourceType || payload?.resource_type || (file?.type?.startsWith('video/') ? 'video' : 'image');
+        const publicUrl = payload?.secure_url || payload?.url || '';
+
+        return {
+            url: publicUrl,
+            resourceType,
+            publicId: payload?.public_id || `${folder}/${safeName}`,
+            format: payload?.format || file?.type || '',
+            bytes: payload?.bytes || file?.size || 0
+        };
+    }
+};
+
+window.CloudinaryUploader = CloudinaryUploader;
+
 const Utils = {
     escapeHtml(value) {
         return String(value ?? '')
@@ -1998,10 +2094,10 @@ const FormHandler = {
                 media = existingJob.media || '';
                 mediaType = existingJob.mediaType || '';
             } else if (this.mediaFile) {
-                if (R2Uploader.isConfigured()) {
+                if (CloudinaryUploader.isConfigured()) {
                     try {
                         const resourceType = this.mediaFile.type.startsWith('video/') ? 'video' : 'image';
-                        const result = await R2Uploader.uploadFile(this.mediaFile, {
+                        const result = await CloudinaryUploader.uploadFile(this.mediaFile, {
                             folder: 'jobs',
                             tags: ['job-media'],
                             resourceType

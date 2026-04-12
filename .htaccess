@@ -29,7 +29,7 @@
 Options -Indexes
 
 # Protect sensitive files
-<FilesMatch "^(\.|firebase-init|oauth-config|r2-config|\.git)">
+<FilesMatch "^(\.|firebase-init|oauth-config|cloudinary-config|\.git)">
     Deny from all
 </FilesMatch>
 
