@@ -208,13 +208,15 @@ const CloudinaryUploader = {
 
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            
+            xhr.timeout = 120000;
+
             // Progress
             xhr.upload.addEventListener('progress', (event) => {
-                if (event.lengthComputable && onProgress) {
-                    const percent = Math.round((event.loaded / event.total) * 100);
-                    onProgress({ percent, loaded: event.loaded, total: event.total });
-                }
+                if (!onProgress) return;
+                const loaded = event.loaded || 0;
+                const total = event.total || 0;
+                const percent = event.lengthComputable ? Math.round((loaded / total) * 100) : 0;
+                onProgress({ percent, loaded, total, lengthComputable: event.lengthComputable });
             });
 
             xhr.addEventListener('load', () => {
@@ -246,6 +248,7 @@ const CloudinaryUploader = {
             });
 
             xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
+            xhr.addEventListener('timeout', () => reject(new Error('Upload timed out after 120 seconds')));
             xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
             xhr.open('POST', uploadUrl);
             xhr.send(formData);
@@ -2130,12 +2133,18 @@ const FormHandler = {
 
                 try {
                     if (CloudinaryUploader.isConfigured()) {
-                        const onUploadProgress = ({ percent, loaded, total }) => {
+                        const onUploadProgress = ({ percent, loaded, total, lengthComputable }) => {
                             const fillEl = document.querySelector('.progress-fill');
                             const textEl = document.getElementById('progress-text');
+                            const loadedKb = Math.round(loaded / 1024);
+                            const totalKb = total ? Math.round(total / 1024) : null;
                             if (fillEl) fillEl.style.width = `${percent}%`;
-                            if (textEl) textEl.textContent = `${percent}%`;
-                            if (statusEl) statusEl.textContent = `Uploading... ${Math.round(loaded/1024)}KB / ${Math.round(total/1024)}KB`;
+                            if (textEl) textEl.textContent = lengthComputable ? `${percent}%` : 'Uploading...';
+                            if (statusEl) {
+                                statusEl.textContent = totalKb
+                                    ? `Uploading... ${loadedKb}KB / ${totalKb}KB`
+                                    : `Uploading... ${loadedKb}KB`;
+                            }
                         };
                         const result = await CloudinaryUploader.uploadFile(this.mediaFile, {
                             folder: 'jobs',
