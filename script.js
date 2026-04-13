@@ -211,15 +211,18 @@ const CloudinaryUploader = {
             xhr.timeout = 120000;
 
             // Progress
+            xhr.upload.addEventListener('loadstart', () => {
+                if (!onProgress) return;
+                onProgress({ percent: 1, loaded: 0, total: 0, lengthComputable: false });
+            });
+
             xhr.upload.addEventListener('progress', (event) => {
                 if (!onProgress) return;
                 const loaded = event.loaded || 0;
                 const total = event.total || 0;
-                const percent = event.lengthComputable ? Math.round((loaded / total) * 100) : 0;
-                onProgress({ percent, loaded, total, lengthComputable: event.lengthComputable });
-            });
-
-            xhr.addEventListener('load', () => {
+                    const percent = event.lengthComputable
+                        ? Math.round((loaded / total) * 100)
+                        : Math.max(12, Math.min(90, 10 + Math.round(loaded / 1024 / 2)));
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         const payload = JSON.parse(xhr.responseText);
@@ -2132,8 +2135,12 @@ const FormHandler = {
                 const fillEl = document.querySelector('.progress-fill');
                 const textEl = document.getElementById('progress-text');
                 if (progressEl) progressEl.style.display = 'block';
-                if (fillEl) fillEl.style.width = '1%';
-                if (textEl) textEl.textContent = 'Uploading...';
+                if (fillEl) {
+                    fillEl.style.width = '12%';
+                    fillEl.style.transition = 'width 0.3s ease';
+                }
+                if (textEl) textEl.textContent = 'Upload started...';
+                if (statusEl) statusEl.textContent = 'Waiting for upload...';
 
                 try {
                     if (CloudinaryUploader.isConfigured()) {
