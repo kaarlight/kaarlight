@@ -2129,7 +2129,11 @@ const FormHandler = {
                 const progressEl = document.getElementById('upload-progress');
                 const statusEl = document.getElementById('upload-status');
                 const errorEl = document.getElementById('upload-error');
+                const fillEl = document.querySelector('.progress-fill');
+                const textEl = document.getElementById('progress-text');
                 if (progressEl) progressEl.style.display = 'block';
+                if (fillEl) fillEl.style.width = '1%';
+                if (textEl) textEl.textContent = 'Uploading...';
 
                 try {
                     if (CloudinaryUploader.isConfigured()) {
@@ -2138,8 +2142,10 @@ const FormHandler = {
                             const textEl = document.getElementById('progress-text');
                             const loadedKb = Math.round(loaded / 1024);
                             const totalKb = total ? Math.round(total / 1024) : null;
-                            if (fillEl) fillEl.style.width = `${percent}%`;
-                            if (textEl) textEl.textContent = lengthComputable ? `${percent}%` : 'Uploading...';
+                            const displayPercent = lengthComputable ? percent : (loaded ? 1 : 0);
+
+                            if (fillEl) fillEl.style.width = `${displayPercent}%`;
+                            if (textEl) textEl.textContent = lengthComputable ? `${percent}%` : (loaded ? `${loadedKb}KB` : 'Uploading...');
                             if (statusEl) {
                                 statusEl.textContent = totalKb
                                     ? `Uploading... ${loadedKb}KB / ${totalKb}KB`
