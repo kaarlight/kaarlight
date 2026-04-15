@@ -162,11 +162,11 @@ t<!doctype html>
             <polyline points="17 8 12 3 7 8"></polyline>
             <line x1="12" y1="3" x2="12" y2="15"></line>
           </svg>
-          <p class="upload-text" data-i18n="upload_text">Drag and drop images or videos here</p>
+          <p class="upload-text" data-i18n="upload_text">Drag and drop JPG or PNG images here</p>
           <p class="upload-subtext"><span data-i18n="upload_subtext">or</span> <button type="button" id="upload-btn" class="upload-link" data-i18n="upload_browse">click to browse</button></p>
-          <p class="upload-limit" data-i18n="upload_limit">Max 2MB per file (images or short videos)</p>
+          <p class="upload-limit" data-i18n="upload_limit">Only JPG and PNG images up to 1MB</p>
         </div>
-        <input type="file" id="media-upload-input" name="mediaFile" accept="image/*,video/*" style="display:none">
+        <input type="file" id="media-upload-input" name="mediaFile" accept=".jpg,.jpeg,.png,image/jpeg,image/png" style="display:none">
         <div id="media-preview-container" class="media-preview-container" style="display:none">
           <div class="media-preview">
             <img id="media-preview-img" class="media-preview-img" style="display:none" alt="Preview image">
@@ -236,5 +236,3 @@ t<!doctype html>
   <script src="script.js" defer></script>
 </body>
 </html>
-
-

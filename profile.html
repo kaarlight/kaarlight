@@ -63,32 +63,62 @@
 
   <main id="main-content" class="container">
     <section class="profile-header">
-      <div class="profile-card">
-        <div class="profile-avatar">
-          <img id="avatar-image" class="profile-avatar-image" src="" alt="Profile picture" style="display:none;">
-          <span id="avatar-initials">JS</span>
-        </div>
-        <div class="profile-info">
-          <h2 id="profile-name">John Smith</h2>
-          <p id="profile-type" class="profile-type">Freelancer</p>
-          <p id="profile-email" class="profile-email">john@example.com</p>
-          <p id="profile-contact" class="profile-contact">+93 700 123 456</p>
-          <div class="profile-stats">
-            <div class="stat">
-              <span class="stat-number" id="stat-jobs">0</span>
-              <span class="stat-label">Jobs Posted</span>
+      <div class="profile-card profile-hero-card">
+        <div class="profile-identity">
+          <div class="profile-avatar">
+            <img id="avatar-image" class="profile-avatar-image" src="" alt="Profile picture" style="display:none;">
+            <span id="avatar-initials">JS</span>
+          </div>
+          <div class="profile-info">
+            <div class="profile-kicker-row">
+              <span class="profile-kicker">My workspace</span>
+              <span id="profile-status-badge" class="profile-status-badge">Ready for work</span>
             </div>
-            <div class="stat">
-              <span class="stat-number" id="stat-active">0</span>
-              <span class="stat-label">Active</span>
+            <h2 id="profile-name">John Smith</h2>
+            <p id="profile-type" class="profile-type">Freelancer</p>
+            <p id="profile-bio-preview" class="profile-bio-preview">Add a short bio so employers immediately understand what you do best.</p>
+            <div class="profile-contact-grid">
+              <p id="profile-email" class="profile-contact-pill">john@example.com</p>
+              <p id="profile-contact" class="profile-contact-pill">+93 700 123 456</p>
             </div>
-            <div class="stat">
-              <span class="stat-number" id="stat-completed">0</span>
-              <span class="stat-label">Completed</span>
+            <div class="profile-stats">
+              <div class="stat">
+                <span class="stat-number" id="stat-jobs">0</span>
+                <span class="stat-label">Jobs Posted</span>
+              </div>
+              <div class="stat">
+                <span class="stat-number" id="stat-active">0</span>
+                <span class="stat-label">Active</span>
+              </div>
+              <div class="stat">
+                <span class="stat-number" id="stat-completed">0</span>
+                <span class="stat-label">Completed</span>
+              </div>
             </div>
           </div>
         </div>
-        <button id="edit-profile-btn" class="btn">Edit Profile</button>
+        <aside class="profile-summary-panel" aria-label="Profile summary">
+          <p class="profile-summary-label">Profile summary</p>
+          <div class="profile-summary-stack">
+            <div class="profile-summary-item">
+              <span class="profile-summary-item-label">Visibility</span>
+              <strong id="profile-visibility">Basic profile</strong>
+            </div>
+            <div class="profile-summary-item">
+              <span class="profile-summary-item-label">Portfolio</span>
+              <a id="profile-portfolio-link" href="#" target="_blank" rel="noopener noreferrer">Add your portfolio</a>
+            </div>
+            <div class="profile-summary-item">
+              <span class="profile-summary-item-label">Next best step</span>
+              <strong id="profile-next-step">Complete your profile details</strong>
+            </div>
+          </div>
+          <div class="profile-action-group">
+            <button id="edit-profile-btn" class="btn">Edit Profile</button>
+            <a href="post-job.html" id="profile-primary-action" class="btn outline">Post a Job</a>
+            <a href="jobs.html" class="profile-secondary-link">Browse live jobs</a>
+          </div>
+        </aside>
       </div>
     </section>
 
@@ -100,14 +130,27 @@
       </div>
 
       <div id="my-jobs" class="profile-tab-content active">
-        <h3>My Job Postings</h3>
+        <div class="profile-section-heading">
+          <div>
+            <p class="profile-section-kicker">Job activity</p>
+            <h3>My Job Postings</h3>
+          </div>
+          <a href="post-job.html" class="btn outline small">Create new job</a>
+        </div>
+        <p class="profile-section-lead">Track everything you have posted in one place and jump back in quickly when you need to edit or remove a listing.</p>
         <div id="jobs-list" class="jobs-list">
           <p class="empty-state">No jobs posted yet. <a href="post-job.html">Post your first job</a></p>
         </div>
       </div>
 
       <div id="profile-info" class="profile-tab-content">
-        <h3>Profile Information</h3>
+        <div class="profile-section-heading">
+          <div>
+            <p class="profile-section-kicker">Public details</p>
+            <h3>Profile Information</h3>
+          </div>
+        </div>
+        <p class="profile-section-lead">Keep your name, contact details, portfolio, and bio polished so people can trust your profile at a glance.</p>
         <form id="profile-form" class="profile-form">
           <div class="form-row">
             <div class="form-col">
@@ -142,8 +185,8 @@
           <small class="char-count" id="bio-count">0/500</small>
 
           <label for="profile-photo">Profile Photo (optional)</label>
-          <input type="file" id="profile-photo" accept="image/*">
-          <small class="help-text">JPG/PNG/WebP up to 1.5MB</small>
+          <input type="file" id="profile-photo" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+          <small class="help-text">JPG or PNG only, up to 1MB</small>
           <div class="photo-actions">
             <button type="button" id="remove-photo-btn" class="btn outline small" style="display:none;">Remove Photo</button>
           </div>
@@ -158,7 +201,13 @@
       </div>
 
       <div id="settings" class="profile-tab-content">
-        <h3>Account Settings</h3>
+        <div class="profile-section-heading">
+          <div>
+            <p class="profile-section-kicker">Security</p>
+            <h3>Account Settings</h3>
+          </div>
+        </div>
+        <p class="profile-section-lead">Manage your password and account access carefully to keep your profile and job activity safe.</p>
 
         <div class="settings-section">
           <h4>Password</h4>
@@ -376,11 +425,24 @@
 
     function loadProfileData(user) {
       const displayName = user.fullname || 'User';
+      const profileType = user.type || 'User';
+      const bio = String(user.bio || '').trim();
+      const portfolio = String(user.portfolio || '').trim();
+      const email = String(user.email || '').trim();
+      const phone = String(user.phone || '').trim();
 
       document.getElementById('profile-name').textContent = displayName;
-      document.getElementById('profile-type').textContent = user.type || 'User';
-      document.getElementById('profile-email').textContent = user.email || '';
-      document.getElementById('profile-contact').textContent = user.phone || '';
+      document.getElementById('profile-type').textContent = profileType;
+      document.getElementById('profile-email').textContent = email || 'Add your email';
+      document.getElementById('profile-contact').textContent = phone || 'Add your phone number';
+      document.getElementById('profile-email').style.display = email ? 'inline-flex' : 'none';
+      document.getElementById('profile-contact').style.display = phone ? 'inline-flex' : 'none';
+      document.getElementById('profile-bio-preview').textContent = bio || 'Add a short bio so employers immediately understand what you do best.';
+      document.getElementById('profile-status-badge').textContent = bio && portfolio ? 'Strong profile' : 'Ready for work';
+      document.getElementById('profile-visibility').textContent = portfolio ? 'Enhanced profile' : 'Basic profile';
+      document.getElementById('profile-next-step').textContent = getNextStepText({ bio, portfolio, phone, email });
+      updatePortfolioSummary(portfolio);
+      updatePrimaryAction(profileType);
       updateWelcome(displayName);
       renderAvatar(user.avatar, displayName);
 
@@ -395,6 +457,44 @@
       document.getElementById('modal-bio').value = user.bio || '';
 
       updateStats(user.id, user.email);
+    }
+
+    function updatePortfolioSummary(portfolio) {
+      const portfolioLink = document.getElementById('profile-portfolio-link');
+      if (!portfolioLink) return;
+
+      if (portfolio) {
+        portfolioLink.href = portfolio;
+        portfolioLink.target = '_blank';
+        portfolioLink.rel = 'noopener noreferrer';
+        portfolioLink.textContent = 'View portfolio';
+      } else {
+        portfolioLink.href = '#profile-info';
+        portfolioLink.removeAttribute('target');
+        portfolioLink.removeAttribute('rel');
+        portfolioLink.textContent = 'Add your portfolio';
+      }
+    }
+
+    function updatePrimaryAction(profileType) {
+      const actionLink = document.getElementById('profile-primary-action');
+      if (!actionLink) return;
+
+      if (String(profileType).toLowerCase() === 'freelancer') {
+        actionLink.href = 'jobs.html';
+        actionLink.textContent = 'Find work';
+      } else {
+        actionLink.href = 'post-job.html';
+        actionLink.textContent = 'Post a Job';
+      }
+    }
+
+    function getNextStepText(details) {
+      if (!details.bio) return 'Write a short bio';
+      if (!details.portfolio) return 'Add a portfolio link';
+      if (!details.phone) return 'Add a phone number';
+      if (!details.email) return 'Add an email address';
+      return 'Your profile is looking good';
     }
 
     function updateWelcome(name) {
@@ -463,7 +563,7 @@
       const jobsList = document.getElementById('jobs-list');
 
       if (userJobs.length === 0) {
-        jobsList.innerHTML = '<p class="empty-state">No jobs posted yet. <a href="post-job.html">Post your first job</a></p>';
+        jobsList.innerHTML = '<div class="empty-state rich-empty-state"><h4>Nothing posted yet</h4><p>Your profile is ready. Create your first listing to start getting responses from local talent.</p><a href="post-job.html" class="btn">Post your first job</a></div>';
         return;
       }
 
@@ -522,14 +622,14 @@
         const file = e.target.files && e.target.files[0];
         if (!file) return;
 
-        if (!file.type.startsWith('image/')) {
-          setError('error-profilePhoto', 'Please choose an image file.');
+        if (!['image/jpeg', 'image/png'].includes(String(file.type || '').toLowerCase())) {
+          setError('error-profilePhoto', 'Please choose a JPG or PNG image.');
           this.value = '';
           return;
         }
 
-        if (file.size > 1.5 * 1024 * 1024) {
-          setError('error-profilePhoto', 'Image must be 1.5MB or smaller.');
+        if (file.size > 1 * 1024 * 1024) {
+          setError('error-profilePhoto', 'Image must be 1MB or smaller.');
           this.value = '';
           return;
         }

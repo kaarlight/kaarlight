@@ -379,10 +379,10 @@ const Utils = {
 
     validateFileUpload(file) {
         if (!file) return { valid: false, error: 'No file selected.' };
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
-        if (!allowedMimes.includes(file.type)) return { valid: false, error: 'File type not allowed. Use JPG, PNG, GIF, WebP, or MP4.' };
-        const maxSize = 2 * 1024 * 1024; // 2MB
-        if (file.size > maxSize) return { valid: false, error: 'File exceeds 2MB limit.' };
+        const allowedMimes = ['image/jpeg', 'image/png'];
+        if (!allowedMimes.includes(file.type)) return { valid: false, error: 'File type not allowed. Use JPG or PNG only.' };
+        const maxSize = 1 * 1024 * 1024;
+        if (file.size > maxSize) return { valid: false, error: 'Image exceeds 1MB limit.' };
         return { valid: true, value: file };
     },
 
@@ -1145,10 +1145,10 @@ const LanguageManager = {
             placeholder_portfolio: 'https://instagram.com/username or https://youtube.com/c/yourprofile',
             portfolio_help: 'Instagram, TikTok, YouTube, or portfolio website',
             label_media_upload: 'Media Upload (optional)',
-            upload_text: 'Drag and drop images or videos here',
+            upload_text: 'Drag and drop JPG or PNG images here',
             upload_subtext: 'or',
             upload_browse: 'click to browse',
-            upload_limit: 'Max 2MB per file (images or short videos)',
+            upload_limit: 'Only JPG and PNG images up to 1MB',
             media_remove: 'Remove',
             submit_job: 'Submit Job',
             cancel: 'Cancel',
@@ -1160,8 +1160,8 @@ const LanguageManager = {
             alert_sample_link_required: 'Please add a sample link for online jobs.',
             alert_sample_link_format: 'Sample link must start with http:// or https://',
             alert_portfolio_link_format: 'Portfolio link must start with http:// or https://',
-            alert_invalid_media_type: 'Please upload an image or video file.',
-            alert_media_too_large: 'File is too large. Please choose a file under 2MB.',
+            alert_invalid_media_type: 'Please upload a JPG or PNG image only.',
+            alert_media_too_large: 'File is too large. Please choose a JPG or PNG image under 1MB.',
             feedback_enter_message: 'Please enter your feedback.',
             feedback_invalid_email: 'Please enter a valid email address.',
             feedback_thanks: 'Thank you for your feedback.',
@@ -1458,10 +1458,10 @@ const LanguageManager = {
             placeholder_portfolio: 'https://instagram.com/username یا https://youtube.com/c/yourprofile',
             portfolio_help: 'اینستاگرام، تیک‌تاک، یوتیوب یا وب‌سایت نمونه‌کار',
             label_media_upload: 'آپلود رسانه (اختیاری)',
-            upload_text: 'تصاویر یا ویدیوها را اینجا بکشید و رها کنید',
+            upload_text: 'تصویر JPG یا PNG را اینجا بکشید و رها کنید',
             upload_subtext: 'یا',
             upload_browse: 'برای انتخاب فایل کلیک کنید',
-            upload_limit: 'حداکثر 2MB برای هر فایل (تصاویر یا ویدیوهای کوتاه)',
+            upload_limit: 'فقط تصاویر JPG و PNG تا 1MB',
             media_remove: 'حذف',
             submit_job: 'ارسال آگهی',
             cancel: 'لغو',
@@ -1473,8 +1473,8 @@ const LanguageManager = {
             alert_sample_link_required: 'لطفاً برای کارهای آنلاین نمونه لینک اضافه کنید.',
             alert_sample_link_format: 'نمونه لینک باید با http:// یا https:// شروع شود',
             alert_portfolio_link_format: 'لینک نمونه‌کار باید با http:// یا https:// شروع شود',
-            alert_invalid_media_type: 'لطفاً یک فایل تصویر یا ویدیو آپلود کنید.',
-            alert_media_too_large: 'فایل خیلی بزرگ است. لطفاً فایلی زیر ۲MB انتخاب کنید.',
+            alert_invalid_media_type: 'لطفاً فقط تصویر JPG یا PNG آپلود کنید.',
+            alert_media_too_large: 'فایل خیلی بزرگ است. لطفاً تصویر JPG یا PNG زیر ۱MB انتخاب کنید.',
             feedback_enter_message: 'لطفاً بازخورد خود را وارد کنید.',
             feedback_invalid_email: 'لطفاً یک ایمیل معتبر وارد کنید.',
             feedback_thanks: 'از بازخورد شما سپاسگزاریم.',
@@ -2405,7 +2405,7 @@ const FormHandler = {
         if (errorEl) errorEl.style.display = 'none';
 
         // Type check
-        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        if (!['image/jpeg', 'image/png'].includes(String(file.type || '').toLowerCase())) {
             if (statusEl) statusEl.textContent = LanguageManager.t('alert_invalid_media_type');
             alert(LanguageManager.t('alert_invalid_media_type'));
             return;
@@ -2427,6 +2427,13 @@ const FormHandler = {
                 // Compress/resize images
                 const compressed = await this.compressImage(file);
                 this.mediaFile = new File([compressed], file.name, { type: 'image/jpeg' });
+                if (this.mediaFile.size > 1 * 1024 * 1024) {
+                    this.mediaFile = null;
+                    const msg = 'Image is still over 1MB after compression. Please choose a smaller image.';
+                    if (statusEl) statusEl.textContent = msg;
+                    alert(msg);
+                    return;
+                }
                 if (statusEl) statusEl.textContent = `Compressed to ${Math.round(this.mediaFile.size / 1024)} KB`;
             }
 
