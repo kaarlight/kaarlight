@@ -29,7 +29,7 @@
   <header class="site-header" role="banner">
     <div class="container nav-row">
       <div class="brand">
-        <a href="index.html" class="brand-link" style="text-decoration: none; display: flex; align-items: center; gap: 12px;">
+        <a href="index.html" class="brand-link">
           <img src="site-icon.svg" alt="AfgJobs Logo" class="site-logo" onerror="this.style.display='none'" loading="lazy" decoding="async" width="40" height="40">
           <div class="brand-text">
             <h1 class="site-title">AfgJobs</h1>
@@ -63,15 +63,15 @@
     </div>
   </header>
 
-  <main id="main-content" class="container">
-    <section class="jobs-page-header">
+  <main id="main-content" class="container page-shell">
+    <section class="jobs-page-header page-hero page-hero--center">
       <div class="header-content">
         <h2 data-i18n="jobs_title">Available Opportunities</h2>
         <p class="lead" data-i18n="jobs_lead">Browse local freelance and short-term gigs. Contact posters directly.</p>
       </div>
     </section>
 
-    <section class="filters-section card" aria-labelledby="filter-heading">
+    <section class="filters-section card surface-card" aria-labelledby="filter-heading">
       <h3 id="filter-heading" class="visually-hidden" data-i18n="filter_heading">Search Filters</h3>
       <div class="filter-grid">
         <div class="search-box">
@@ -143,7 +143,7 @@
     </section>
   </main>
 
-  <button id="jump-to-top" class="jump-top-btn" type="button" aria-label="Scroll to top">↑</button>
+  <button id="jump-to-top" class="jump-top-btn" type="button" aria-label="Scroll to top">&#8593;</button>
 
   <footer class="site-footer">
     <div class="container footer-inner">
@@ -183,3 +183,4 @@
   <script src="script.js" defer></script>
 </body>
 </html>
+

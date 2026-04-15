@@ -52,8 +52,8 @@
     </div>
   </header>
 
-  <main id="main-content" class="container">
-    <section class="admin-reports-hero">
+  <main id="main-content" class="container page-shell">
+    <section class="admin-reports-hero page-hero page-hero--center">
       <h2 data-i18n="admin_reports_title">Reported Jobs</h2>
       <p class="lead" data-i18n="admin_reports_lead">Review reports submitted by users. Reports are stored in Firestore.</p>
     </section>
@@ -63,7 +63,7 @@
         <button id="clear-reports-btn" class="btn outline" data-i18n="admin_clear_reports">Clear All Reports</button>
       </div>
       <div id="reports-empty" class="empty-state-container" style="display: none;">
-        <div class="empty-icon">✅</div>
+        <div class="empty-icon">&#10003;</div>
         <h4 data-i18n="admin_no_reports_title">No reports yet</h4>
         <p data-i18n="admin_no_reports_body">Reports will appear here when users report a job.</p>
       </div>
@@ -75,7 +75,7 @@
         <button id="clear-feedback-btn" class="btn outline" data-i18n="admin_clear_feedback">Clear All Feedback</button>
       </div>
       <div id="feedback-empty" class="empty-state-container" style="display: none;">
-        <div class="empty-icon">âœ…</div>
+        <div class="empty-icon">&#10003;</div>
         <h4 data-i18n="admin_no_feedback_title">No feedback yet</h4>
         <p data-i18n="admin_no_feedback_body">Feedback will appear here when users send a message.</p>
       </div>
@@ -98,3 +98,5 @@
   <script src="script.js" defer></script>
 </body>
 </html>
+
+
