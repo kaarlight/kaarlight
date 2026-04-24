@@ -250,12 +250,20 @@ select:focus-visible {
 .mobile-account-link {
   color: var(--muted);
   text-decoration: none;
+  gap: 0.35rem;
 }
 
 .mobile-account-link svg {
   display: block;
   width: 20px;
   height: 20px;
+}
+
+.mobile-account-text {
+  display: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .mobile-menu-toggle {
@@ -3091,15 +3099,26 @@ label {
     display: inline-flex;
     order: 2;
     align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
+    justify-content: flex-end;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    padding: 0;
     justify-self: end;
     margin-right: 0.15rem;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: var(--card);
-    color: var(--muted);
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--primary);
+    font-weight: 700;
+  }
+  .mobile-account-link svg {
+    display: none;
+  }
+  .mobile-account-text {
+    display: inline;
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
   }
   .brand {
     order: 1;

@@ -603,7 +603,29 @@ const Storage = {
 
     getCurrentUser() {
         try {
-            return JSON.parse(localStorage.getItem(APP_KEYS.USER) || 'null');
+            const raw = JSON.parse(localStorage.getItem(APP_KEYS.USER) || 'null');
+            if (!raw || typeof raw !== 'object') return null;
+
+            const authSource = String(localStorage.getItem('afg_auth_source') || '').trim();
+            const hasIdentity = raw.id || raw.email || raw.oauthUid;
+            if (!hasIdentity) return null;
+
+            if (authSource === 'local') {
+                const users = this.getUsers();
+                const matchedUser = users.find((user) =>
+                    user && (
+                        (raw.id && String(user.id) === String(raw.id))
+                        || (raw.email && user.email === raw.email)
+                    )
+                );
+                return matchedUser ? raw : null;
+            }
+
+            if (authSource === 'firebase') {
+                return raw;
+            }
+
+            return null;
         } catch {
             return null;
         }
@@ -1753,6 +1775,9 @@ const LanguageManager = {
         const profileLink = document.getElementById('profile-link');
         if (profileLink) profileLink.textContent = this.t('auth_profile');
 
+        const mobileAccountText = document.getElementById('mobile-account-text');
+        if (mobileAccountText) mobileAccountText.textContent = this.t('auth_sign_in');
+
         const settingsLink = document.getElementById('settings-link');
         if (settingsLink) settingsLink.textContent = this.t('auth_settings');
 
@@ -1828,6 +1853,8 @@ const AuthManager = {
         const settingsLink = document.getElementById('settings-link');
         const logoutBtn = document.getElementById('logout-btn');
         const mobileAccountLink = document.getElementById('mobile-account-link');
+        const mobileAccountText = document.getElementById('mobile-account-text');
+        const mobileBottomProfileLink = document.getElementById('mobile-bottom-profile-link');
         const mobileWelcome = document.getElementById('mobile-welcome');
         const navAuth = document.querySelector('.nav-auth');
         let adminLink = document.getElementById('admin-reports-link');
@@ -1854,6 +1881,8 @@ const AuthManager = {
             if (adminLink) adminLink.style.display = 'none';
             logoutBtn.style.display = 'none';
             if (mobileAccountLink) mobileAccountLink.href = 'auth.html';
+            if (mobileAccountText) mobileAccountText.textContent = LanguageManager.t('auth_sign_in');
+            if (mobileBottomProfileLink) mobileBottomProfileLink.style.display = 'none';
             if (mobileWelcome) mobileWelcome.textContent = LanguageManager.t('welcome_prefix') + ' User';
         };
 
@@ -1870,6 +1899,8 @@ const AuthManager = {
             if (adminLink) adminLink.style.display = Utils.isAdmin(user) ? 'inline' : 'none';
             logoutBtn.style.display = 'inline';
             if (mobileAccountLink) mobileAccountLink.href = 'profile.html';
+            if (mobileAccountText) mobileAccountText.textContent = LanguageManager.t('auth_profile');
+            if (mobileBottomProfileLink) mobileBottomProfileLink.style.display = 'flex';
             if (mobileWelcome) mobileWelcome.textContent = LanguageManager.formatWelcome(user.fullname || 'User');
         };
 
