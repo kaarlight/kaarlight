@@ -58,6 +58,24 @@
       <p class="lead" data-i18n="admin_reports_lead">Review reports submitted by users. Reports are stored in Firestore.</p>
     </section>
 
+    <section class="admin-reports-section" aria-labelledby="account-moderation-title">
+      <h3 id="account-moderation-title" style="margin-bottom: 0.75rem;">Account Moderation</h3>
+      <form id="account-ban-form" class="feedback-form">
+        <label for="ban-email">Account email to ban</label>
+        <input id="ban-email" type="email" placeholder="user@example.com" autocomplete="off" maxlength="100" required>
+        <label for="ban-reason">Reason</label>
+        <textarea id="ban-reason" rows="3" maxlength="300" placeholder="Short reason for the ban"></textarea>
+        <button type="submit" class="btn danger">Ban Account</button>
+        <p id="account-ban-msg" class="feedback-msg" aria-live="polite"></p>
+      </form>
+      <div id="accounts-empty" class="empty-state-container" style="display: none;">
+        <div class="empty-icon">&#9888;</div>
+        <h4>No local accounts found</h4>
+        <p>Use the email form above to ban a Firebase account, or local accounts will appear here after users sign up in this browser.</p>
+      </div>
+      <div id="accounts-list" class="reports-list"></div>
+    </section>
+
     <section class="admin-reports-section">
       <div class="admin-reports-actions">
         <button id="clear-reports-btn" class="btn outline" data-i18n="admin_clear_reports">Clear All Reports</button>

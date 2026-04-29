@@ -418,6 +418,7 @@
   <script src="oauth-config.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
   <script>
     // Tab switching
     function switchTab(tabName, event) {
@@ -490,6 +491,73 @@
 
     function socialEmail(provider) {
       return `${provider.toLowerCase()}.${Date.now()}@social.kaarlight.local`;
+    }
+
+    function normalizeEmail(value) {
+      return String(value || '').trim().toLowerCase();
+    }
+
+    function accountBanId(value) {
+      return normalizeEmail(value).replace(/[/.#[\]]/g, '_');
+    }
+
+    function getLocalBans() {
+      try {
+        const bans = JSON.parse(localStorage.getItem('afg_account_bans') || '[]');
+        return Array.isArray(bans) ? bans : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function accountMatchesBan(user, ban) {
+      if (!user || !ban || ban.banned === false) return false;
+      const userEmail = normalizeEmail(user.email);
+      const banEmail = normalizeEmail(ban.email);
+      if (userEmail && banEmail && userEmail === banEmail) return true;
+      if (user.id && ban.userId && String(user.id) === String(ban.userId)) return true;
+      if (user.oauthUid && ban.oauthUid && String(user.oauthUid) === String(ban.oauthUid)) return true;
+      return false;
+    }
+
+    async function isAccountBanned(user, auth) {
+      if (!user) return false;
+      if (getLocalBans().some((ban) => accountMatchesBan(user, ban))) return true;
+
+      if (!window.firebase || !window.firebase.firestore) return false;
+      try {
+        const app = window.firebase.apps && window.firebase.apps.length
+          ? window.firebase.app()
+          : window.firebase.initializeApp(getOAuthConfig());
+        const db = window.firebase.firestore(app);
+        const ids = [
+          user.email ? accountBanId(user.email) : '',
+          user.oauthUid ? `uid_${String(user.oauthUid)}` : '',
+          user.id ? `uid_${String(user.id)}` : ''
+        ].filter(Boolean);
+
+        for (const id of ids) {
+          const doc = await db.collection('accountBans').doc(id).get();
+          if (doc.exists && doc.data()?.banned !== false) return true;
+        }
+      } catch {
+        return false;
+      }
+
+      return false;
+    }
+
+    async function blockIfBanned(user, formType, auth) {
+      if (!(await isAccountBanned(user, auth))) return false;
+      showMessage(formType, 'This account has been banned. Contact support if you think this is a mistake.', 'error');
+      localStorage.removeItem('afg_current_user');
+      localStorage.removeItem('afg_auth_source');
+      try {
+        await auth?.signOut?.();
+      } catch {
+        // Ignore sign-out errors after clearing local state.
+      }
+      return true;
     }
 
     function getOAuthConfig() {
@@ -650,9 +718,11 @@
           if (!user.avatar && authUser.photoURL) user.avatar = authUser.photoURL;
         }
 
-        localStorage.setItem('afg_users', JSON.stringify(users));
         user.authProvider = providerName;
         user.authSource = 'firebase';
+        if (await blockIfBanned(user, formType, init.auth)) return;
+
+        localStorage.setItem('afg_users', JSON.stringify(users));
         completeAuth(user, formType, `${providerName} sign ${mode === 'signup' ? 'up' : 'in'} successful! Redirecting...`);
       } catch (err) {
         const code = err && err.code ? String(err.code) : '';
@@ -777,6 +847,8 @@
         return;
       }
 
+      if (await blockIfBanned(user, 'login', null)) return;
+
       // Migrate legacy plain-text or unsalted SHA-256 entries after successful login.
       if (user.password || (user.passwordHash && !String(user.passwordHash).startsWith('pbkdf2-sha256$'))) {
         user.passwordHash = await hashPassword(password);
@@ -858,6 +930,8 @@
         showError('error-signup-email', 'Email already registered');
         return;
       }
+
+      if (await blockIfBanned({ email }, 'signup', null)) return;
 
       // Create new user
       const newUser = {
@@ -951,9 +1025,11 @@
           if (!user.avatar && authUser.photoURL) user.avatar = authUser.photoURL;
         }
 
-        localStorage.setItem('afg_users', JSON.stringify(users));
         user.authProvider = providerName;
         user.authSource = 'firebase';
+        if (await blockIfBanned(user, formType, init.auth)) return;
+
+        localStorage.setItem('afg_users', JSON.stringify(users));
         localStorage.removeItem('afg_auth_pending');
         completeAuth(user, formType, `${providerName} sign ${pending.mode === 'signup' ? 'up' : 'in'} successful! Redirecting...`);
       } catch (err) {

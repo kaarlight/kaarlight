@@ -14,12 +14,14 @@ const APP_KEYS = {
     NEWSLETTER: 'afg_newsletter',
     SEEKER_POSTS: 'afg_job_seeker_posts',
     REPORTS: 'afg_job_reports',
+    ACCOUNT_BANS: 'afg_account_bans',
     LANGUAGE: 'afg_language'
 };
 
 const ADMIN_EMAILS = ['mahd62215@gmail.com'];
 const REPORTS_COLLECTION = 'reports';
 const FEEDBACK_COLLECTION = 'feedback';
+const ACCOUNT_BANS_COLLECTION = 'accountBans';
 const REPORTS_LIMIT = 500;
 const FEEDBACK_LIMIT = 500;
 
@@ -337,6 +339,24 @@ const Utils = {
         return ADMIN_EMAILS.includes(email);
     },
 
+    normalizeEmail(value) {
+        return String(value || '').trim().toLowerCase();
+    },
+
+    accountBanId(value) {
+        return this.normalizeEmail(value).replace(/[/.#[\]]/g, '_');
+    },
+
+    accountMatchesBan(user, ban) {
+        if (!user || !ban || ban.banned === false) return false;
+        const userEmail = this.normalizeEmail(user.email);
+        const banEmail = this.normalizeEmail(ban.email);
+        if (userEmail && banEmail && userEmail === banEmail) return true;
+        if (user.id && ban.userId && String(user.id) === String(ban.userId)) return true;
+        if (user.oauthUid && ban.oauthUid && String(user.oauthUid) === String(ban.oauthUid)) return true;
+        return false;
+    },
+
     /** Enhanced security validations */
     sanitizeText(value, maxLength = 500) {
         if (typeof value !== 'string') return '';
@@ -593,6 +613,130 @@ const Storage = {
         }
     },
 
+    getAccountBans() {
+        const bans = Utils.readJson(APP_KEYS.ACCOUNT_BANS, []);
+        return Array.isArray(bans) ? bans : [];
+    },
+
+    saveAccountBans(bans) {
+        localStorage.setItem(APP_KEYS.ACCOUNT_BANS, JSON.stringify(Array.isArray(bans) ? bans : []));
+    },
+
+    isUserBanned(user) {
+        if (!user) return false;
+        return this.getAccountBans().some((ban) => Utils.accountMatchesBan(user, ban));
+    },
+
+    async fetchAccountBansAsync() {
+        if (FirebaseStore.enabled && FirebaseStore.db) {
+            try {
+                const snapshot = await FirebaseStore.db
+                    .collection(ACCOUNT_BANS_COLLECTION)
+                    .where('banned', '==', true)
+                    .limit(500)
+                    .get();
+                const remoteBans = snapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    __source: 'firebase'
+                }));
+                if (remoteBans.length) return remoteBans;
+            } catch {
+                // Fall back to local bans below.
+            }
+        }
+
+        return this.getAccountBans().map((ban) => ({
+            ...ban,
+            __source: ban.__source || 'local'
+        }));
+    },
+
+    async isUserBannedAsync(user) {
+        if (!user) return false;
+        if (this.isUserBanned(user)) return true;
+        if (!FirebaseStore.enabled) {
+            await FirebaseStore.init();
+        }
+        if (!FirebaseStore.enabled || !FirebaseStore.db) return false;
+
+        const ids = [
+            user.email ? Utils.accountBanId(user.email) : '',
+            user.oauthUid ? `uid_${String(user.oauthUid)}` : '',
+            user.id ? `uid_${String(user.id)}` : ''
+        ].filter(Boolean);
+
+        for (const id of ids) {
+            try {
+                const doc = await FirebaseStore.db.collection(ACCOUNT_BANS_COLLECTION).doc(id).get();
+                if (doc.exists && doc.data()?.banned !== false) return true;
+            } catch {
+                // Keep checking any remaining identifiers.
+            }
+        }
+
+        return false;
+    },
+
+    async saveAccountBanAsync(target, adminUser) {
+        const email = Utils.normalizeEmail(target?.email);
+        if (!email) return { ok: false, reason: 'email-required' };
+        if (ADMIN_EMAILS.includes(email)) return { ok: false, reason: 'cannot-ban-admin' };
+
+        const payload = {
+            banned: true,
+            email,
+            userId: target?.userId || target?.id || null,
+            oauthUid: target?.oauthUid || null,
+            reason: Utils.sanitizeText(target?.reason || '', 300),
+            createdAt: new Date().toISOString(),
+            createdAtMs: Date.now(),
+            createdBy: adminUser?.email || 'admin'
+        };
+
+        let source = 'local';
+        if (FirebaseStore.enabled && FirebaseStore.db) {
+            try {
+                await FirebaseStore.db
+                    .collection(ACCOUNT_BANS_COLLECTION)
+                    .doc(Utils.accountBanId(email))
+                    .set(payload, { merge: true });
+                source = 'firebase';
+            } catch {
+                // Fall back to local storage below.
+            }
+        }
+
+        const bans = this.getAccountBans();
+        const index = bans.findIndex((ban) => Utils.normalizeEmail(ban.email) === email);
+        const localPayload = { ...payload, __source: source };
+        if (index >= 0) bans[index] = { ...bans[index], ...localPayload };
+        else bans.push(localPayload);
+        this.saveAccountBans(bans);
+
+        return { ok: true, source };
+    },
+
+    async removeAccountBanAsync(email) {
+        const normalized = Utils.normalizeEmail(email);
+        if (!normalized) return { ok: false, reason: 'email-required' };
+
+        if (FirebaseStore.enabled && FirebaseStore.db) {
+            try {
+                await FirebaseStore.db
+                    .collection(ACCOUNT_BANS_COLLECTION)
+                    .doc(Utils.accountBanId(normalized))
+                    .delete();
+            } catch {
+                // Still remove local fallback below.
+            }
+        }
+
+        const updated = this.getAccountBans().filter((ban) => Utils.normalizeEmail(ban.email) !== normalized);
+        this.saveAccountBans(updated);
+        return { ok: true };
+    },
+
     getTheme() {
         return localStorage.getItem(APP_KEYS.THEME) || 'light';
     },
@@ -610,6 +754,8 @@ const Storage = {
             const hasIdentity = raw.id || raw.email || raw.oauthUid;
             if (!hasIdentity) return null;
 
+            if (this.isUserBanned(raw)) return null;
+
             if (authSource === 'local') {
                 const users = this.getUsers();
                 const matchedUser = users.find((user) =>
@@ -618,6 +764,7 @@ const Storage = {
                         || (raw.email && user.email === raw.email)
                     )
                 );
+                if (matchedUser && this.isUserBanned(matchedUser)) return null;
                 return matchedUser ? raw : null;
             }
 
@@ -1892,6 +2039,12 @@ const AuthManager = {
                 applySignedOut();
                 return;
             }
+            if (Storage.isUserBanned(user)) {
+                localStorage.removeItem(APP_KEYS.USER);
+                localStorage.removeItem('afg_auth_source');
+                applySignedOut();
+                return;
+            }
             userDisplay.textContent = LanguageManager.formatWelcome(user.fullname || 'User');
             userDisplay.style.display = 'inline';
             authLink.style.display = 'none';
@@ -1905,9 +2058,22 @@ const AuthManager = {
             if (mobileWelcome) mobileWelcome.textContent = LanguageManager.formatWelcome(user.fullname || 'User');
         };
 
-        const syncWelcomeFromStorage = () => {
+        const syncWelcomeFromStorage = async () => {
             const latestUser = Storage.getCurrentUser();
             if (latestUser) {
+                if (await Storage.isUserBannedAsync(latestUser)) {
+                    localStorage.removeItem(APP_KEYS.USER);
+                    localStorage.removeItem('afg_auth_source');
+                    if (window.firebase?.auth) {
+                        try {
+                            await window.firebase.auth().signOut();
+                        } catch {
+                            // Ignore sign-out errors after clearing the local session.
+                        }
+                    }
+                    applySignedOut();
+                    return;
+                }
                 applySignedIn(latestUser);
             } else {
                 applySignedOut();
@@ -1938,7 +2104,7 @@ const AuthManager = {
 
         if (window.firebase && window.firebase.auth) {
             const auth = window.firebase.auth();
-            auth.onAuthStateChanged((fbUser) => {
+            auth.onAuthStateChanged(async (fbUser) => {
                 if (fbUser && fbUser.uid) {
                     const providerInfo = Array.isArray(fbUser.providerData) ? fbUser.providerData[0] : null;
                     const localUser = Storage.getCurrentUser();
@@ -1947,6 +2113,18 @@ const AuthManager = {
                             || (localUser.oauthUid && localUser.oauthUid === fbUser.uid)
                             || (localUser.email && fbUser.email && localUser.email === fbUser.email));
                     if (isSameLocal) {
+                        if (await Storage.isUserBannedAsync(localUser)) {
+                            localStorage.removeItem(APP_KEYS.USER);
+                            localStorage.removeItem('afg_auth_source');
+                            try {
+                                await auth.signOut();
+                            } catch {
+                                // Ignore sign-out errors after clearing the local session.
+                            }
+                            applySignedOut();
+                            alert('This account has been banned. Contact support if you think this is a mistake.');
+                            return;
+                        }
                         localStorage.setItem(APP_KEYS.USER, JSON.stringify(localUser));
                         localStorage.setItem('afg_auth_source', 'firebase');
                         applySignedIn(localUser);
@@ -1969,6 +2147,18 @@ const AuthManager = {
                         oauthProvider: profileUser.oauthProvider || providerInfo?.providerId || '',
                         authProvider: profileUser.authProvider || providerInfo?.providerId || ''
                     };
+                    if (await Storage.isUserBannedAsync(syncedUser)) {
+                        localStorage.removeItem(APP_KEYS.USER);
+                        localStorage.removeItem('afg_auth_source');
+                        try {
+                            await auth.signOut();
+                        } catch {
+                            // Ignore sign-out errors after clearing the local session.
+                        }
+                        applySignedOut();
+                        alert('This account has been banned. Contact support if you think this is a mistake.');
+                        return;
+                    }
                     localStorage.setItem(APP_KEYS.USER, JSON.stringify(syncedUser));
                     localStorage.setItem('afg_auth_source', 'firebase');
                     applySignedIn(syncedUser);
@@ -2752,6 +2942,138 @@ const AdminAccess = {
     }
 };
 
+const AccountAdminManager = {
+    async renderAccounts() {
+        const list = document.getElementById('accounts-list');
+        const empty = document.getElementById('accounts-empty');
+        if (!list) return;
+
+        const users = Storage.getUsers();
+        const bans = await Storage.fetchAccountBansAsync();
+
+        if (!users.length && !bans.length) {
+            list.innerHTML = '';
+            if (empty) empty.style.display = 'block';
+            return;
+        }
+
+        if (empty) empty.style.display = 'none';
+
+        const userCards = users.map((user) => {
+            const email = Utils.normalizeEmail(user.email);
+            const isBanned = bans.some((ban) => Utils.accountMatchesBan(user, ban));
+            const name = Utils.escapeHtml(user.fullname || 'User');
+            const safeEmail = Utils.escapeHtml(email || 'No email');
+            const provider = Utils.escapeHtml(user.oauthProvider || user.authProvider || user.authSource || 'local');
+            const reason = bans.find((ban) => Utils.accountMatchesBan(user, ban))?.reason || '';
+            const banText = isBanned ? 'Unban Account' : 'Ban Account';
+            const banClass = isBanned ? 'outline' : 'danger';
+            return `
+                <div class="report-card">
+                    <div class="report-title">${name}</div>
+                    <div class="report-meta">
+                        <span>${safeEmail}</span>
+                        <span>Provider: ${provider}</span>
+                        <span>Status: ${isBanned ? 'Banned' : 'Active'}</span>
+                    </div>
+                    ${reason ? `<div class="report-details">Reason: ${Utils.escapeHtml(reason)}</div>` : ''}
+                    <div class="report-actions">
+                        <button class="btn ${banClass} small" data-account-email="${Utils.escapeHtml(email)}" data-account-action="${isBanned ? 'unban' : 'ban'}">${banText}</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        const banOnlyCards = bans
+            .filter((ban) => !users.some((user) => Utils.accountMatchesBan(user, ban)))
+            .map((ban) => {
+                const email = Utils.normalizeEmail(ban.email);
+                return `
+                    <div class="report-card">
+                        <div class="report-title">${Utils.escapeHtml(email || 'Banned account')}</div>
+                        <div class="report-meta">
+                            <span>Status: Banned</span>
+                            <span>Source: ${Utils.escapeHtml(ban.__source || 'local')}</span>
+                        </div>
+                        ${ban.reason ? `<div class="report-details">Reason: ${Utils.escapeHtml(ban.reason)}</div>` : ''}
+                        <div class="report-actions">
+                            <button class="btn outline small" data-account-email="${Utils.escapeHtml(email)}" data-account-action="unban">Unban Account</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+        list.innerHTML = [...userCards, ...banOnlyCards].join('');
+
+        list.querySelectorAll('button[data-account-email]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const email = btn.getAttribute('data-account-email') || '';
+                const action = btn.getAttribute('data-account-action') || 'ban';
+                if (!email) return;
+
+                if (action === 'unban') {
+                    if (!confirm(`Unban ${email}?`)) return;
+                    await Storage.removeAccountBanAsync(email);
+                    await this.renderAccounts();
+                    return;
+                }
+
+                const reason = prompt(`Reason for banning ${email}?`, 'Policy violation') || '';
+                const result = await Storage.saveAccountBanAsync({ email, reason }, Storage.getCurrentUser());
+                if (!result.ok) {
+                    alert(result.reason === 'cannot-ban-admin' ? 'You cannot ban an admin account.' : 'Could not ban this account.');
+                    return;
+                }
+                await this.renderAccounts();
+            });
+        });
+    },
+
+    async init() {
+        const list = document.getElementById('accounts-list');
+        if (!list) return;
+
+        const form = document.getElementById('account-ban-form');
+        const empty = document.getElementById('accounts-empty');
+        await FirebaseAuthState.wait();
+        if (!AdminAccess.ensure(list, empty, null)) {
+            if (form) form.style.display = 'none';
+            return;
+        }
+
+        form?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const emailInput = document.getElementById('ban-email');
+            const reasonInput = document.getElementById('ban-reason');
+            const msg = document.getElementById('account-ban-msg');
+            const email = Utils.normalizeEmail(emailInput?.value);
+            const reason = String(reasonInput?.value || '').trim();
+
+            const result = await Storage.saveAccountBanAsync({ email, reason }, Storage.getCurrentUser());
+            if (!result.ok) {
+                if (msg) {
+                    msg.textContent = result.reason === 'cannot-ban-admin'
+                        ? 'You cannot ban an admin account.'
+                        : 'Enter a valid email to ban.';
+                    msg.className = 'feedback-msg error';
+                }
+                return;
+            }
+
+            if (msg) {
+                msg.textContent = result.source === 'firebase'
+                    ? 'Account ban saved to Firebase.'
+                    : 'Account ban saved locally. Check Firestore rules if you expected Firebase storage.';
+                msg.className = 'feedback-msg success';
+            }
+            form.reset();
+            await this.renderAccounts();
+        });
+
+        await this.renderAccounts();
+    }
+};
+
 const FirebaseAuthState = {
     ready: null,
 
@@ -3240,6 +3562,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     FeedbackHandler.init();
     NewsletterHandler.init();
     JobSeekerHandler.init();
+    AccountAdminManager.init();
     ReportsManager.init();
     FeedbackAdminManager.init();
 
