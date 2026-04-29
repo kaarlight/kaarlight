@@ -2455,9 +2455,9 @@ const FormHandler = {
 
         try {
             if (file.type.startsWith('image/')) {
-                // Compress/resize images
                 const compressed = await this.compressImage(file);
-                this.mediaFile = new File([compressed], file.name, { type: 'image/jpeg' });
+                const previewName = String(file.name || 'job-image').replace(/\.[^.]+$/, '') || 'job-image';
+                this.mediaFile = new File([compressed], `${previewName}.jpg`, { type: 'image/jpeg' });
                 if (this.mediaFile.size > 1 * 1024 * 1024) {
                     this.mediaFile = null;
                     const msg = 'Image is still over 1MB after compression. Please choose a smaller image.';
@@ -2489,6 +2489,19 @@ const FormHandler = {
         }
     },
 
+    readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const result = event.target?.result;
+                if (result) resolve(String(result));
+                else reject(new Error('Could not read image file.'));
+            };
+            reader.onerror = () => reject(reader.error || new Error('Could not read image file.'));
+            reader.readAsDataURL(file);
+        });
+    },
+
     compressImage(file, maxWidth = 1200, quality = 0.8) {
         return new Promise((resolve, reject) => {
             const canvas = document.createElement('canvas');
@@ -2497,6 +2510,11 @@ const FormHandler = {
 
             img.onload = () => {
                 const { width, height } = img;
+                if (!ctx || !width || !height) {
+                    reject(new Error('Could not prepare image preview.'));
+                    return;
+                }
+
                 if (width <= maxWidth) {
                     canvas.width = width;
                     canvas.height = height;
@@ -2508,14 +2526,25 @@ const FormHandler = {
                 }
 
                 canvas.toBlob((blob) => {
+                    if (!blob) {
+                        reject(new Error('Could not compress image.'));
+                        return;
+                    }
+
                     if (blob.size > file.size * 0.9) {
-                        // Retry lower quality if barely smaller
                         const lowerQualityCanvas = document.createElement('canvas');
                         const lowerCtx = lowerQualityCanvas.getContext('2d');
+                        if (!lowerCtx) {
+                            resolve(blob);
+                            return;
+                        }
+
                         lowerQualityCanvas.width = canvas.width;
                         lowerQualityCanvas.height = canvas.height;
                         lowerCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        lowerQualityCanvas.toBlob(resolve, 'image/jpeg', quality * 0.7);
+                        lowerQualityCanvas.toBlob((smallerBlob) => {
+                            resolve(smallerBlob || blob);
+                        }, 'image/jpeg', quality * 0.7);
                     } else {
                         resolve(blob);
                     }
@@ -2523,7 +2552,9 @@ const FormHandler = {
             };
 
             img.onerror = reject;
-            img.src = URL.createObjectURL(file);
+            this.readFileAsDataUrl(file).then((dataUrl) => {
+                img.src = dataUrl;
+            }).catch(reject);
         });
     }
 };
