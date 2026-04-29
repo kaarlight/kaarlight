@@ -785,10 +785,11 @@ const Renderer = {
             ? `<p><a href="${sampleUrl}" target="_blank" rel="noopener noreferrer">${LanguageManager.t('view_sample_link')}</a></p>`
             : '';
 
-        const mediaHtml = job.media
+        const mediaUrl = Utils.safeHttpUrl(job.media);
+        const mediaHtml = mediaUrl
             ? ((job.mediaType || '').includes('video')
-                ? `<video src="${job.media}" class="card-media" controls></video>`
-                : `<img src="${job.media}" class="card-media" alt="Job media">`)
+                ? `<video src="${Utils.escapeHtml(mediaUrl)}" class="card-media" controls></video>`
+                : `<img src="${Utils.escapeHtml(mediaUrl)}" class="card-media" alt="Job media">`)
             : '';
 
         return `
@@ -2277,10 +2278,6 @@ const FormHandler = {
                 media = existingJob.media || null;
                 mediaType = existingJob.mediaType || null;
             }
-
-            // If a new media file was selected, require a successful upload before saving
-            console.log('[Job Post] Media status:', { media, mediaType, uploadSuccess, hadFile: !!this.mediaFile });
-
 
             const jobData = {
                 title,

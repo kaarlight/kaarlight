@@ -664,19 +664,76 @@
       }
     }
 
-    async function hashPassword(password) {
+    function bytesToHex(bytes) {
+      return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function hexToBytes(hex) {
+      const clean = String(hex || '').replace(/[^a-f0-9]/gi, '');
+      const bytes = new Uint8Array(clean.length / 2);
+      for (let i = 0; i < bytes.length; i += 1) {
+        bytes[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+      }
+      return bytes;
+    }
+
+    function constantTimeEqual(a, b) {
+      if (!a || !b || a.length !== b.length) return false;
+      let diff = 0;
+      for (let i = 0; i < a.length; i += 1) diff |= a[i] ^ b[i];
+      return diff === 0;
+    }
+
+    async function legacySha256(password) {
       const data = new TextEncoder().encode(String(password || ''));
       const digest = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(digest));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return bytesToHex(new Uint8Array(digest));
+    }
+
+    async function hashPassword(password) {
+      const iterations = 210000;
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(String(password || '')),
+        'PBKDF2',
+        false,
+        ['deriveBits']
+      );
+      const bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+        keyMaterial,
+        256
+      );
+      return `pbkdf2-sha256$${iterations}$${bytesToHex(salt)}$${bytesToHex(new Uint8Array(bits))}`;
     }
 
     async function verifyPassword(user, enteredPassword) {
       if (!user) return false;
 
       if (user.passwordHash) {
-        const enteredHash = await hashPassword(enteredPassword);
-        return user.passwordHash === enteredHash;
+        const stored = String(user.passwordHash || '');
+        const parts = stored.split('$');
+        if (parts.length === 4 && parts[0] === 'pbkdf2-sha256') {
+          const iterations = Number(parts[1]);
+          const salt = hexToBytes(parts[2]);
+          const expected = hexToBytes(parts[3]);
+          const keyMaterial = await crypto.subtle.importKey(
+            'raw',
+            new TextEncoder().encode(String(enteredPassword || '')),
+            'PBKDF2',
+            false,
+            ['deriveBits']
+          );
+          const bits = await crypto.subtle.deriveBits(
+            { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+            keyMaterial,
+            expected.length * 8
+          );
+          return constantTimeEqual(new Uint8Array(bits), expected);
+        }
+
+        return stored === await legacySha256(enteredPassword);
       }
 
       return user.password === enteredPassword;
@@ -686,7 +743,7 @@
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       
-      const email = document.getElementById('login-email').value.trim();
+      const email = document.getElementById('login-email').value.trim().toLowerCase();
       const password = document.getElementById('login-password').value;
       const remember = document.getElementById('login-remember').checked;
 
@@ -712,7 +769,7 @@
 
       // Get stored users
       const users = JSON.parse(localStorage.getItem('afg_users') || '[]');
-      const user = users.find(u => u.email === email);
+      const user = users.find(u => String(u.email || '').trim().toLowerCase() === email);
 
       const isValidPassword = await verifyPassword(user, password);
       if (!user || !isValidPassword) {
@@ -720,8 +777,8 @@
         return;
       }
 
-      // Migrate legacy plain-text password entries to hash format after successful login.
-      if (user.password && !user.passwordHash) {
+      // Migrate legacy plain-text or unsalted SHA-256 entries after successful login.
+      if (user.password || (user.passwordHash && !String(user.passwordHash).startsWith('pbkdf2-sha256$'))) {
         user.passwordHash = await hashPassword(password);
         delete user.password;
         localStorage.setItem('afg_users', JSON.stringify(users));
@@ -751,7 +808,7 @@
       e.preventDefault();
 
       const fullname = document.getElementById('signup-fullname').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
+      const email = document.getElementById('signup-email').value.trim().toLowerCase();
       const phone = document.getElementById('signup-phone').value.trim();
       const password = document.getElementById('signup-password').value;
       const confirm = document.getElementById('signup-confirm').value;
@@ -797,7 +854,7 @@
 
       // Check if email already exists
       const users = JSON.parse(localStorage.getItem('afg_users') || '[]');
-      if (users.some(u => u.email === email)) {
+      if (users.some(u => String(u.email || '').trim().toLowerCase() === email)) {
         showError('error-signup-email', 'Email already registered');
         return;
       }

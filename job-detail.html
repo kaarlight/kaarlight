@@ -591,15 +591,16 @@
         }
 
         // Media
-        if (job.media) {
+        const mediaUrl = Utils.safeHttpUrl(job.media);
+        if (mediaUrl) {
           document.getElementById('media-section').style.display = 'block';
           const isVideo = (job.mediaType || '').includes('video');
           if (isVideo) {
-            document.getElementById('job-media-video').src = job.media;
+            document.getElementById('job-media-video').src = mediaUrl;
             document.getElementById('job-media-video').style.display = 'block';
             document.getElementById('job-media-img').style.display = 'none';
           } else {
-            document.getElementById('job-media-img').src = job.media;
+            document.getElementById('job-media-img').src = mediaUrl;
             document.getElementById('job-media-img').style.display = 'block';
             document.getElementById('job-media-video').style.display = 'none';
           }
