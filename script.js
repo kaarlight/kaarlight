@@ -542,7 +542,7 @@ const Storage = {
             }
         }
 
-        return this.saveJob(job) ? { ok: true } : { ok: false };
+        return this.saveJob(job) ? { ok: true, local: true } : { ok: false };
     },
 
     updateJob(job) {
@@ -2329,13 +2329,15 @@ const FormHandler = {
 
             if (saveResult?.ok) {
                 if (msgEl) {
-                    msgEl.textContent = isEditing ? 'Job updated successfully.' : LanguageManager.t('post_success');
+                    msgEl.textContent = saveResult.local
+                        ? 'Saved on this device only. Cloud sync is unavailable, so this listing may not appear for other visitors yet.'
+                        : (isEditing ? 'Job updated successfully.' : LanguageManager.t('post_success'));
                     msgEl.className = 'form-msg success';
                 }
                 setTimeout(() => {
                     localStorage.removeItem('editJobId');
                     window.location.href = 'jobs.html';
-                }, 1500);
+                }, saveResult.local ? 3500 : 1500);
             } else {
                 if (msgEl) {
                     msgEl.textContent = LanguageManager.t('post_fail');
